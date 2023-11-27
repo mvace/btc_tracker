@@ -1,0 +1,28 @@
+{% extends 'core/base.html' %}
+
+{% block content %}
+<div class="col-md-6 offset-md-3">
+    <h1>Login</h1>
+    <br>
+    {% if form.errors %}
+    <div class="alert alert-warning">
+        <h4>Error(s) occurred:</h4>
+        <ul>
+            {% for field_name, field_errors in form.errors.items %}
+                {% for error in field_errors %}
+                <li>{{ error }}</li>
+                {% endfor %}
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+    <form method="POST">
+       {% csrf_token %}
+       {{ form.username }}
+       <br>
+       {{ form.password }}
+       <br>
+       <button type="submit" class="btn btn-dark btn-sm">Login</button>
+    </form>
+</div>
+{% endblock %}

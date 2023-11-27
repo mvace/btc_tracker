@@ -1,0 +1,25 @@
+{% extends 'core/base.html' %}
+{% load humanize %}
+{% block content %}
+
+<div class="container my-5">
+    
+    <div class="row justify-content-center">
+        <div class="card col-4" >
+            <div class="card-body">
+                <h2 class="card-title">Transaction #{{ transaction.id }}</h2>
+                <small class="card-subtitle mb-2 text-body-secondary">{{ transaction.timestamp|date:"d-M-Y G:i" }}</small>
+                <ul>
+                    <li>Amount: {{ transaction.amount }}</li>
+                    <li>BTC Price: {{ transaction.price|floatformat:0 }}$</li>
+                    <li>Transaction Price: {{ transaction.initial_value }}$</li>
+                    <li>Current Value: {{ transaction.get_current_value|floatformat:2 }}$</li>
+                    <li>Net result: {{ net_result|floatformat:2 }}$</li>
+                </ul>
+                <p class="{% if roi > 0 %}bg-success{% else %}bg-danger{% endif %} rounded text-center text-light py-3 mx-5">ROI: {{ roi|floatformat:2|intcomma }}%</p>    
+
+            </div>
+          </div>
+    </div>
+</div>
+{% endblock %}
