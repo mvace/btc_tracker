@@ -1,8 +1,25 @@
 from django import forms
 from django.forms import DateTimeInput
-from .models import Transaction
+from .models import Transaction, Portfolio
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib.auth.models import User
+
+
+class PortfolioForm(forms.ModelForm):
+    class Meta:
+        model = Portfolio
+        fields = ["name"]
+
+    name = forms.CharField(
+        label="",
+        widget=forms.TextInput(
+            attrs={
+                "class": "form-control",
+                "placeholder": "Enter Portfolio Name:",
+                "maxlength": "30",
+            }
+        ),
+    )
 
 
 class TransactionForm(forms.ModelForm):

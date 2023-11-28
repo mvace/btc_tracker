@@ -1,83 +1,90 @@
 {% extends 'core/base.html' %}
 
 {% block content %}
+
+{% if request.user.id == portfolio.user.id %}
+
     <div class="container">
         <!-- Section to display dashboards with information -->
-        <section> 
-        <h5>Portfolio Name</h5>
-        <div class="row">
-            <div class="col-md">
-                <table class="table table-borderless">
-                    <tbody>
-                    <tr>
-                    <td>Current Amount</td>
-                    <td>{{ current_amount|floatformat:8 }} BTC</td>
-                    </tr>
-                    <tr>
-                    <td>Average Purchase Price</td>
-                    <td>{{ average_price|floatformat:0 }}$</td>
-                    </tr>
-                    <tr>
-                    <td>Current ROI</td>
-                    <td>
-                        <button type="button" class="btn {% if current_ROI > 0 %}btn-success{% else %}btn-danger{% endif %} btn-sm">
-                            {{ current_ROI|floatformat:2 }}%
-                        </button>
-                    </td>
-                    </tr>
-                </tbody>
-                </table>
+        {% if transactions %}
+            <section> 
+            <h5>Portfolio Name</h5>
+            <div class="row">
+                <div class="col-md">
+                    <table class="table table-borderless">
+                        <tbody>
+                        <tr>
+                        <td>Current Amount</td>
+                        <td>{{ current_amount|floatformat:8 }} BTC</td>
+                        </tr>
+                        <tr>
+                        <td>Average Purchase Price</td>
+                        <td>{{ average_price|floatformat:0 }}$</td>
+                        </tr>
+                        <tr>
+                        <td>Current ROI</td>
+                        <td>
+                            <button type="button" class="btn {% if current_ROI > 0 %}btn-success{% else %}btn-danger{% endif %} btn-sm">
+                                {{ current_ROI|floatformat:2 }}%
+                            </button>
+                        </td>
+                        </tr>
+                    </tbody>
+                    </table>
+                </div>
+                <div class="col-md">
+                    <table class="table table-borderless">
+                        <tbody>
+                        <tr>
+                        <td>Invested</td>
+                        <td>{{ cost|floatformat:0 }}$</td>
+                        </tr>
+                        <tr>
+                        <td>Current Value</td>
+                        <td>{{ current_value|floatformat:0 }}$</td>
+                        </tr>
+                        <tr>
+                        <td>Net Result (USD)</td>
+                        <td>
+                            <button type="button" class="btn {% if net_result > 0 %}btn-success{% else %}btn-danger{% endif %} btn-sm">{{ net_result|floatformat:0 }}$</button>
+                        </td>
+                        </tr>
+                    </tbody>
+                    </table>
+                </div>
+                <div class="col-md">
+                    <table class="table table-borderless rounded">
+                        <tbody>
+                        <tr>
+                        <td>Min ROI</td>
+                        <td>
+                            <span class="d-inline">{{ minROI|floatformat:0 }}%</span>
+                            <span class="d-inline small text-muted"><small>({{ minROI_date|date:"d-M-Y" }})</small></span>
+                        </td>
+                        </tr>
+                        <tr>
+                        <td>Max ROI</td>
+                        <td>
+                            <span class="d-inline">{{ maxROI|floatformat:0 }}%</span>
+                            <span class="d-inline small text-muted"><small>({{ maxROI_date|date:"d-M-Y" }})</small></span>
+                        </td>
+                        </tr>
+                        <tr>
+                        <td>Current BTC price</td>
+                        <td><button type="button" class="btn btn-sm" style="background-color:#f7931a;">{{ current_price|floatformat:0 }}$</button></td>
+                        </tr>
+                    </tbody>
+                    </table>
+                </div>
             </div>
-            <div class="col-md">
-                <table class="table table-borderless">
-                    <tbody>
-                    <tr>
-                    <td>Invested</td>
-                    <td>{{ cost|floatformat:0 }}$</td>
-                    </tr>
-                    <tr>
-                    <td>Current Value</td>
-                    <td>{{ current_value|floatformat:0 }}$</td>
-                    </tr>
-                    <tr>
-                    <td>Net Result (USD)</td>
-                    <td>
-                        <button type="button" class="btn {% if net_result > 0 %}btn-success{% else %}btn-danger{% endif %} btn-sm">{{ net_result|floatformat:0 }}$</button>
-                    </td>
-                    </tr>
-                </tbody>
-                </table>
-            </div>
-            <div class="col-md">
-                <table class="table table-borderless rounded">
-                    <tbody>
-                    <tr>
-                    <td>Min ROI</td>
-                    <td>
-                        <span class="d-inline">{{ minROI|floatformat:0 }}%</span>
-                        <span class="d-inline small text-muted"><small>({{ minROI_date|date:"d-M-Y" }})</small></span>
-                    </td>
-                    </tr>
-                    <tr>
-                    <td>Max ROI</td>
-                    <td>
-                        <span class="d-inline">{{ maxROI|floatformat:0 }}%</span>
-                        <span class="d-inline small text-muted"><small>({{ maxROI_date|date:"d-M-Y" }})</small></span>
-                    </td>
-                    </tr>
-                    <tr>
-                    <td>Current BTC price</td>
-                    <td><button type="button" class="btn btn-sm" style="background-color:#f7931a;">{{ current_price|floatformat:0 }}$</button></td>
-                    </tr>
-                </tbody>
-                </table>
-            </div>
-        </div>
-        </section>
-        <!-- Section to display portfolio ROI graph -->
-        <section>
-            {{ graph_html|safe }}
-        </section>
+            </section>
+  
+            <!-- Section to display portfolio ROI graph -->
+            <section>
+                {{ graph_html|safe }}
+            </section>
+        {% else %}
+        {% endif %}
         <!-- Section to display transactions -->
         <section>
             {% if transactions %}
@@ -115,6 +122,12 @@
         </section>
         <br>
     </div>
+{% else %}
+<div class="alert alert-danger alert-dismissible fade show mx-5" role="alert">
+    You are not authorized to view this!
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+{% endif %}
    
 {% endblock %}
 

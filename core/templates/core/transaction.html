@@ -1,8 +1,9 @@
 {% extends 'core/base.html' %}
-{% load humanize %}
+
 {% block content %}
 
-<div class="container my-5">
+{% if request.user.id == transaction.portfolio.user.id %}
+<div class="container my-2">
     
     <div class="row justify-content-center">
         <div class="card col-4" >
@@ -16,10 +17,16 @@
                     <li>Current Value: {{ transaction.get_current_value|floatformat:2 }}$</li>
                     <li>Net result: {{ net_result|floatformat:2 }}$</li>
                 </ul>
-                <p class="{% if roi > 0 %}bg-success{% else %}bg-danger{% endif %} rounded text-center text-light py-3 mx-5">ROI: {{ roi|floatformat:2|intcomma }}%</p>    
+                <p class="{% if roi > 0 %}bg-success{% else %}bg-danger{% endif %} rounded text-center text-light py-3 mx-5">ROI: {{ roi|floatformat:2 }}%</p>    
 
             </div>
           </div>
     </div>
 </div>
+{% else %}
+<div class="alert alert-danger alert-dismissible fade show mx-5" role="alert">
+    You are not authorized to view this!
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+{% endif %}
 {% endblock %}

@@ -19,10 +19,9 @@ class DailyClosePrice(models.Model):
 class Portfolio(models.Model):
     name = models.CharField(max_length=255)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    performace = 1
 
     def __str__(self):
-        return f"{self.name} by {self.user}"
+        return f"{self.name}"
 
 
 class Transaction(models.Model):

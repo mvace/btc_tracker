@@ -1,6 +1,5 @@
 from datetime import datetime
 from decimal import Decimal
-
 import cryptocompare
 import pandas as pd
 import plotly.express as px
@@ -9,21 +8,110 @@ from django.db.models import F, ExpressionWrapper, DecimalField, Sum
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.contrib.auth import login, logout, authenticate
-from .forms import CustomUserCreationForm, CustomAuthenticationForm
-
+from django.contrib.auth.decorators import login_required
+from .forms import CustomUserCreationForm, CustomAuthenticationForm, PortfolioForm
 from .models import DailyClosePrice, Transaction, Portfolio
 from .forms import TransactionForm
 
 
-def portfolio(request):
+@login_required
+def index(request):
+    portfolios = Portfolio.objects.filter(user=request.user.id)
+    if request.method == "POST":
+        form = PortfolioForm(request.POST)
+        if form.is_valid():
+            portfolio = form.save(commit=False)
+            portfolio.user = request.user
+            portfolio.save()
+            messages.success(request, ("Portfolio Created"))
+            return redirect("index")
+    else:
+        form = PortfolioForm()
+
+    return render(
+        request,
+        "core/index.html",
+        {"portfolios": portfolios, "form": form},
+    )
+
+
+@login_required
+def transaction_view(request, pk):
+    # Retrieve the transaction with the given ID
+    transaction = Transaction.objects.get(id=pk)
+
+    # Calculate the current value and ROI of the transaction
+    current_val = transaction.get_current_value()
+    roi = ((current_val - transaction.initial_value) / transaction.initial_value) * 100
+    net_result = current_val - transaction.initial_value
+
+    # Render the transaction template with data
+    return render(
+        request,
+        "core/transaction.html",
+        {
+            "transaction": transaction,
+            "current_val": current_val,
+            "roi": roi,
+            "net_result": net_result,
+        },
+    )
+
+
+def login_user(request):
+    if request.method == "POST":
+        form = CustomAuthenticationForm(request, data=request.POST)
+        if form.is_valid():
+            user = form.get_user()
+            if user:
+                login(request, user)
+                messages.success(request, ("You're now logged in."))
+                return redirect("index")
+        else:
+            print(form.errors)
+    else:
+        form = CustomAuthenticationForm()
+
+    if "next" in request.GET:
+        print(request.GET)
+        print(type(request.GET))
+        messages.info(request, "Please log in to access the page.")
+
+    return render(request, "core/login.html", {"form": form})
+
+
+def register(request):
+    if request.method == "POST":
+        form = CustomUserCreationForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            login(request, user)
+            messages.success(request, ("Account created. You've been logged in."))
+            return redirect("index")
+    else:
+        form = CustomUserCreationForm()
+
+    return render(request, "core/register.html", {"form": form})
+
+
+def logout_user(request):
+    logout(request)
+    messages.success(request, ("You've been logged out."))
+    return redirect("index")
+
+
+@login_required
+def portfolio(request, pk):
     # Retrieve current BTC price
     current_price = Decimal(cryptocompare.get_price("BTC", "USD")["BTC"]["USD"])
 
     # Fetch all transactions for a specific portfolio, ordered by timestamp
-    portfolio = Portfolio.objects.get(id=1)
+    portfolio = Portfolio.objects.get(id=pk)
     transactions = Transaction.objects.filter(portfolio__id=portfolio.id).order_by(
         "timestamp"
     )
+    print(f"T{transactions}")
+    print(type(transactions))
     if request.method == "POST":
         form = TransactionForm(request.POST or None)
         if form.is_valid():
@@ -166,94 +254,8 @@ def portfolio(request):
                 "maxROI_date": datetime.utcfromtimestamp(maxROI[0]),
                 "minROI": minROI[1],
                 "minROI_date": datetime.utcfromtimestamp(minROI[0]),
+                "portfolio": portfolio,
                 "net_result": net_result,
                 "transactions": transactions,
             },
         )
-
-
-def index(request):
-    # Retrieve all daily close prices
-    data = DailyClosePrice.objects.all()
-    df = pd.DataFrame(list(data.values()))
-
-    # Convert the timestamp to a datetime object
-    df["daily_timestamp"] = pd.to_datetime(df["daily_timestamp"], unit="s")
-
-    # Create a line plot using Plotly Express
-    fig = px.line(
-        df,
-        y="close_price",
-        x="daily_timestamp",
-        title="BTC Price Graph",
-    )
-    fig.update_layout(
-        xaxis_title="Date",
-        yaxis_title="Close Price",
-        font=dict(family="Arial", size=12, color="Black"),
-    )
-
-    # Convert the plot to HTML
-    graph_html = fig.to_html(full_html=False)
-
-    # Render the index template with data
-    return render(request, "core/index.html", {"graph_html": graph_html})
-
-
-def transaction_view(request, pk):
-    # Retrieve the transaction with the given ID
-    transaction = Transaction.objects.get(id=pk)
-
-    # Calculate the current value and ROI of the transaction
-    current_val = transaction.get_current_value()
-    roi = ((current_val - transaction.initial_value) / transaction.initial_value) * 100
-    net_result = current_val - transaction.initial_value
-
-    # Render the transaction template with data
-    return render(
-        request,
-        "core/transaction.html",
-        {
-            "transaction": transaction,
-            "current_val": current_val,
-            "roi": roi,
-            "net_result": net_result,
-        },
-    )
-
-
-def login_user(request):
-    if request.method == "POST":
-        form = CustomAuthenticationForm(request, data=request.POST)
-        if form.is_valid():
-            user = form.get_user()
-            if user:
-                login(request, user)
-                messages.success(request, ("You're now logged in."))
-                return redirect("index")
-        else:
-            print(form.errors)
-    else:
-        form = CustomAuthenticationForm()
-
-    return render(request, "core/login.html", {"form": form})
-
-
-def register(request):
-    if request.method == "POST":
-        form = CustomUserCreationForm(request.POST)
-        if form.is_valid():
-            user = form.save()
-            login(request, user)
-            messages.success(request, ("Account created. You've been logged in."))
-            return redirect("index")
-    else:
-        form = CustomUserCreationForm()
-
-    return render(request, "core/register.html", {"form": form})
-
-
-def logout_user(request):
-    logout(request)
-    messages.success(request, ("You've been logged out."))
-    return redirect("index")

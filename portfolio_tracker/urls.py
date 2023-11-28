@@ -29,7 +29,7 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("", index, name="index"),
     path("transaction/<int:pk>", transaction_view, name="transaction"),
-    path("portfolio/", portfolio, name="portfolio"),
+    path("portfolio/<int:pk>", portfolio, name="portfolio"),
     path("login/", login_user, name="login_user"),
     path("logout/", logout_user, name="logout_user"),
     path("register/", register, name="register"),
