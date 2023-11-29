@@ -73,8 +73,6 @@ def login_user(request):
         form = CustomAuthenticationForm()
 
     if "next" in request.GET:
-        print(request.GET)
-        print(type(request.GET))
         messages.info(request, "Please log in to access the page.")
 
     return render(request, "core/login.html", {"form": form})
