@@ -5,8 +5,11 @@ from django.db import models
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.utils import timezone
 from decimal import Decimal
+import requests
 
 # Create your models here.
+api_key = "71519726c4ebf2d4f41b3687d06386ba7c3a07d41ed4e1db77d2394e6b0fd540"
+cryptocompare.cryptocompare._set_api_key_parameter(api_key)
 
 
 class DailyClosePrice(models.Model):
@@ -53,11 +56,21 @@ class Transaction(models.Model):
         self.timestamp_unix = int(self.timestamp.timestamp())
         self.timestamp = self.timestamp.replace(minute=0, second=0, microsecond=0)
         self.daily_timestamp = int(self.timestamp.replace(hour=0).timestamp())
-        self.price = Decimal(
-            cryptocompare.get_historical_price_hour(
-                "BTC", "USD", limit=1, toTs=self.timestamp
-            )[1]["close"]
-        )
+
+        endpoint = "https://min-api.cryptocompare.com/data/v2/histohour"
+        params = {
+            "fsym": "BTC",  # From symbol (Bitcoin)
+            "tsym": "USD",  # To symbol (US Dollar)
+            "limit": 1,  # Number of data points (e.g., 24 hours around the target timestamp)
+            "toTs": self.timestamp_unix,  # End time for the data request (converted to Unix timestamp)
+            "api_key": api_key,
+        }
+        response = requests.get(endpoint, params=params)
+        data = response.json()
+        price = data["Data"]["Data"][1]["close"]
+        self.price = Decimal(price)
+
+        # self.price = Decimal(cryptocompare.get_historical_price_hour("BTC", "USD", limit=1, toTs=self.timestamp[1]["close"])
         self.initial_value = self.amount * self.price
 
         super().save(*args, **kwargs)

@@ -1,8 +1,6 @@
 from datetime import datetime
 from decimal import Decimal
 import cryptocompare
-import pandas as pd
-import plotly.express as px
 import plotly.graph_objects as go
 from django.db.models import F, ExpressionWrapper, DecimalField, Sum
 from django.shortcuts import render, redirect
@@ -12,6 +10,10 @@ from django.contrib.auth.decorators import login_required
 from .forms import CustomUserCreationForm, CustomAuthenticationForm, PortfolioForm
 from .models import DailyClosePrice, Transaction, Portfolio
 from .forms import TransactionForm
+import requests
+
+api_key = "71519726c4ebf2d4f41b3687d06386ba7c3a07d41ed4e1db77d2394e6b0fd540"
+cryptocompare.cryptocompare._set_api_key_parameter(api_key)
 
 
 @login_required
@@ -100,8 +102,23 @@ def logout_user(request):
 
 @login_required
 def portfolio(request, pk):
-    # Retrieve current BTC price
-    current_price = Decimal(cryptocompare.get_price("BTC", "USD")["BTC"]["USD"])
+    # CryptoCompare API endpoint for price data
+    endpoint = "https://min-api.cryptocompare.com/data/price"
+
+    # Parameters for the API request
+    params = {
+        "fsym": "BTC",  # From symbol (Bitcoin)
+        "tsyms": "USD",  # To symbol (US Dollar)
+        "api_key": api_key,
+    }
+
+    # Making the API request
+    response = requests.get(endpoint, params=params)
+    # Parse the JSON response
+    data = response.json()
+    # Extract the Bitcoin price in USD
+    current_price = Decimal(data["USD"])
+    # current_price = Decimal(cryptocompare.get_price("BTC", "USD")["BTC"]["USD"])
 
     # Fetch all transactions for a specific portfolio, ordered by timestamp
     portfolio = Portfolio.objects.get(id=pk)
