@@ -8,7 +8,7 @@ from django.contrib import messages
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required
 from .forms import CustomUserCreationForm, CustomAuthenticationForm, PortfolioForm
-from .models import DailyClosePrice, Transaction, Portfolio
+from .models import DailyClosePrice, Transaction, Portfolio, PortfolioMetrics
 from .forms import TransactionForm
 import requests
 
@@ -102,6 +102,9 @@ def logout_user(request):
 
 @login_required
 def portfolio(request, pk):
+    portfolio = Portfolio.objects.get(id=pk)
+    metrics = PortfolioMetrics.objects.get(portfolio=pk)
+
     # CryptoCompare API endpoint for price data
     endpoint = "https://min-api.cryptocompare.com/data/price"
 
@@ -118,15 +121,11 @@ def portfolio(request, pk):
     data = response.json()
     # Extract the Bitcoin price in USD
     current_price = Decimal(data["USD"])
-    # current_price = Decimal(cryptocompare.get_price("BTC", "USD")["BTC"]["USD"])
+    current_value = metrics.BTC_amount * current_price
+    print(f"CV: {current_value}")
+    net_result = current_value - metrics.USD_invested
+    current_ROI = ((current_value - metrics.USD_invested) / metrics.USD_invested) * 100
 
-    # Fetch all transactions for a specific portfolio, ordered by timestamp
-    portfolio = Portfolio.objects.get(id=pk)
-    transactions = Transaction.objects.filter(portfolio__id=portfolio.id).order_by(
-        "timestamp"
-    )
-    print(f"T{transactions}")
-    print(type(transactions))
     if request.method == "POST":
         form = TransactionForm(request.POST or None)
         if form.is_valid():
@@ -137,71 +136,23 @@ def portfolio(request, pk):
         return redirect(request.META.get("HTTP_REFERER"))
 
     else:
-        # Aggregate transaction data
-        transactions_data = transactions.aggregate(
-            amount=Sum("amount"),
-            cost=Sum("initial_value"),
-        )
-
-        # Find the start date of the transactions
-        start_date = transactions.first().daily_timestamp
-
-        # Retrieve daily close prices from the start date
-        data = DailyClosePrice.objects.filter(daily_timestamp__gte=start_date)
-
-        # Initialize variables
-        roi_data_dict = {}
-        average_price = None
-        current_value = transactions_data["amount"] * current_price
-
-        # Calculate ROI data for each day
-        for day in data:
-            cumulative_data = transactions.filter(
-                timestamp_unix__lte=day.daily_timestamp
-            ).aggregate(
-                amount_cumulative=Sum("amount") or Decimal("0"),
-                value_cumulative=Sum(
-                    ExpressionWrapper(
-                        F("amount") * F("price"), output_field=DecimalField()
-                    )
-                ),
-                average_price=ExpressionWrapper(
-                    F("value_cumulative") / F("amount_cumulative"),
-                    output_field=DecimalField(),
-                ),
-                roi=ExpressionWrapper(
-                    ((day.close_price - F("average_price")) / F("average_price")) * 100,
-                    output_field=DecimalField(),
-                ),
-            )
-
-            # Store ROI data for each day
-            roi_data_dict[day.daily_timestamp] = cumulative_data["roi"] or Decimal("0")
-            average_price = cumulative_data["average_price"]
-            current_value = transactions_data["amount"] * current_price
-
-        # Calculate net result and current ROI
-        net_result = current_value - transactions_data["cost"]
-        current_ROI = (
-            (current_value - transactions_data["cost"]) / transactions_data["cost"]
-        ) * 100
-
-        # Find dates with minimum and maximum ROI
-        minROI = min(roi_data_dict.items(), key=lambda x: x[1])
-        maxROI = max(roi_data_dict.items(), key=lambda x: x[1])
+        transactions = Transaction.objects.filter(portfolio=pk)
+        metrics = PortfolioMetrics.objects.get(portfolio_id=pk)
+        roi_data_dict = metrics.roi_dict
 
         # Create main and highlight data for the plot
         main_data = go.Scatter(
-            x=[datetime.utcfromtimestamp(val) for val in roi_data_dict],
-            y=[roi_data_dict[val] for val in roi_data_dict],
+            x=[datetime.utcfromtimestamp(int(key)) for key in roi_data_dict],
+            y=[Decimal(roi_data_dict[key]) for key in roi_data_dict],
             mode="lines",
             marker=dict(size=8),
             line=dict(color="grey", width=1),
             name="ROI",
         )
+
         highlight_data = go.Scatter(
             x=[datetime.utcfromtimestamp(t.daily_timestamp) for t in transactions],
-            y=[roi_data_dict[t.daily_timestamp] for t in transactions],
+            y=[roi_data_dict[str(t.daily_timestamp)] for t in transactions],
             text=[
                 f"Amount: {t.amount} Cost: {t.initial_value:,.0f}$ Price: {t.price:,.0f}$".replace(
                     ",", " "
@@ -223,8 +174,8 @@ def portfolio(request, pk):
             xaxis=dict(
                 title="Date",
                 range=[
-                    datetime.utcfromtimestamp(min(roi_data_dict.keys())),
-                    datetime.utcfromtimestamp(max(roi_data_dict.keys())),
+                    datetime.utcfromtimestamp(int(min(roi_data_dict.keys()))),
+                    datetime.utcfromtimestamp(int(max(roi_data_dict.keys()))),
                 ],
             ),
             yaxis=dict(title="ROI (%)", tickformat=".2f"),
@@ -233,8 +184,12 @@ def portfolio(request, pk):
                     type="line",
                     xref="x",
                     yref="y",
-                    x0=min([datetime.utcfromtimestamp(val) for val in roi_data_dict]),
-                    x1=max([datetime.utcfromtimestamp(val) for val in roi_data_dict]),
+                    x0=min(
+                        [datetime.utcfromtimestamp(int(val)) for val in roi_data_dict]
+                    ),
+                    x1=max(
+                        [datetime.utcfromtimestamp(int(val)) for val in roi_data_dict]
+                    ),
                     y0=0,
                     y1=0,
                     line=dict(color="grey", width=1),
@@ -257,20 +212,19 @@ def portfolio(request, pk):
             request,
             "core/portfolio.html",
             {
-                "average_price": cumulative_data["average_price"],
-                "cost": transactions_data["cost"],
+                "average_price": metrics.average_price,
                 "current_ROI": current_ROI,
-                "current_amount": transactions_data["amount"],
                 "current_price": current_price,
                 "current_value": current_value,
                 "form": form,
                 "graph_html": graph_html,
-                "maxROI": maxROI[1],
-                "maxROI_date": datetime.utcfromtimestamp(maxROI[0]),
-                "minROI": minROI[1],
-                "minROI_date": datetime.utcfromtimestamp(minROI[0]),
+                "maxROI": metrics.max_roi[1],
+                "maxROI_date": datetime.utcfromtimestamp(int(metrics.max_roi[0])),
+                "minROI": metrics.min_roi[1],
+                "minROI_date": datetime.utcfromtimestamp(int(metrics.min_roi[0])),
                 "portfolio": portfolio,
                 "net_result": net_result,
                 "transactions": transactions,
+                "metrics": metrics,
             },
         )

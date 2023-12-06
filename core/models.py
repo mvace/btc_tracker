@@ -2,12 +2,12 @@ from datetime import timedelta, datetime
 import cryptocompare
 from django.contrib.auth.models import User
 from django.db import models
+from django.db.models import F, ExpressionWrapper, DecimalField, Sum
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.utils import timezone
 from decimal import Decimal
 import requests
 
-# Create your models here.
 api_key = "71519726c4ebf2d4f41b3687d06386ba7c3a07d41ed4e1db77d2394e6b0fd540"
 cryptocompare.cryptocompare._set_api_key_parameter(api_key)
 
@@ -19,17 +19,9 @@ class DailyClosePrice(models.Model):
     )
 
 
-class Portfolio(models.Model):
-    name = models.CharField(max_length=255)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-
-    def __str__(self):
-        return f"{self.name}"
-
-
 class Transaction(models.Model):
     portfolio = models.ForeignKey(
-        Portfolio, on_delete=models.CASCADE, related_name="transactions"
+        "Portfolio", on_delete=models.CASCADE, related_name="transactions"
     )
     timestamp = models.DateTimeField(
         validators=[
@@ -74,6 +66,77 @@ class Transaction(models.Model):
         self.initial_value = self.amount * self.price
 
         super().save(*args, **kwargs)
+        # Update PortfolioMetrics after saving a new transaction
+        self.portfolio.update_metrics()
 
     def __str__(self):
         return f"ID: {self.id}"
+
+
+class Portfolio(models.Model):
+    name = models.CharField(max_length=255)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+
+    def __str__(self) -> str:
+        return f"{self.name}"
+
+    def update_metrics(self):
+        metrics, created = PortfolioMetrics.objects.get_or_create(portfolio=self)
+        # Fetch all transactions for a specific portfolio, ordered by timestamp
+        transactions = Transaction.objects.filter(portfolio__id=self.id).order_by(
+            "timestamp"
+        )
+        # Aggregate transaction datas
+        transactions_data = transactions.aggregate(
+            BTC_amount=Sum("amount"),
+            USD_invested=Sum("initial_value"),
+        )
+        # Find the start date of the transactions
+        start_date = transactions.first().daily_timestamp
+        daily_data = DailyClosePrice.objects.filter(daily_timestamp__gte=start_date)
+
+        for day in daily_data:
+            cumulative_data = transactions.filter(
+                timestamp_unix__lte=day.daily_timestamp
+            ).aggregate(
+                amount_cumulative=Sum("amount") or Decimal("0"),
+                value_cumulative=Sum(
+                    ExpressionWrapper(
+                        F("amount") * F("price"), output_field=DecimalField()
+                    )
+                ),
+                average_price=ExpressionWrapper(
+                    F("value_cumulative") / F("amount_cumulative"),
+                    output_field=DecimalField(),
+                ),
+                roi=ExpressionWrapper(
+                    ((day.close_price - F("average_price")) / F("average_price")) * 100,
+                    output_field=DecimalField(),
+                ),
+            )
+
+            # Store ROI data for each day
+            metrics.roi_dict[day.daily_timestamp] = str(
+                cumulative_data["roi"] or Decimal("0")
+            )
+
+            roi_values = [(key, float(val)) for key, val in metrics.roi_dict.items()]
+
+            max_roi = max(roi_values, key=lambda x: x[1])
+            min_roi = min(roi_values, key=lambda x: x[1])
+            metrics.max_roi = max_roi
+            metrics.min_roi = min_roi
+            metrics.average_price = cumulative_data["average_price"]
+            metrics.USD_invested = transactions_data["USD_invested"]
+            metrics.BTC_amount = transactions_data["BTC_amount"]
+            metrics.save()
+
+
+class PortfolioMetrics(models.Model):
+    portfolio = models.OneToOneField(Portfolio, on_delete=models.CASCADE)
+    average_price = models.DecimalField(max_digits=20, decimal_places=2, null=True)
+    roi_dict = models.JSONField(default=dict)
+    max_roi = models.JSONField(null=True)
+    min_roi = models.JSONField(null=True)
+    USD_invested = models.DecimalField(max_digits=20, decimal_places=2, null=True)
+    BTC_amount = models.DecimalField(max_digits=20, decimal_places=8, null=True)
