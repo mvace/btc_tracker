@@ -88,23 +88,35 @@
         <!-- Section to display transactions -->
         <section>
             {% if transactions %}
-                <h5 class="mx-auto">My Transactions:</h5>
-                {% for transaction in transactions %}
+            <div class="container mt-4 col-8">
+                <h5 class="text-center">My Transactions</h5>
+                <table class="table table-hover table-borderless table-striped">
+                    <thead class="table-secondary">
+                        <tr>
+                            <th>Transaction ID</th>
+                            <th>Date of Purchase</th>
+                            <th>BTC Amount</th>
+                            <th>USD Cost</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for transaction in transactions %}
+                        <a href="{% url 'transaction' transaction.id %}" class="text-decoration-none">
+                            <tr class="clickable-row" data-href="{% url 'transaction' transaction.id %}" style="cursor: pointer;">
+                                <th scope="row">#{{ transaction.id }}</th>
+                                <td>{{ transaction.timestamp|date:"d-M-Y" }}</td>
+                                <td>{{ transaction.amount }} BTC</td>
+                                <td>{{ transaction.initial_value }}$</td>
+                            </tr>
+                        </a>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+                        
+                    
+
                 
-                <div class="card col-10 mx-auto m-1" style="background-color:#ffffff; border: 1px solid #f7931a;">
-                    <a href="{% url 'transaction' transaction.id %}" class="text-decoration-none">
-                        <div class="card-body p-2">
-                            <row class="small text-muted">
-                                <span class="p-3">#{{ transaction.id }}</span>
-                                <span class="p-3">{{ transaction.timestamp|date:"d-M-Y" }}</span>
-                                <span>{{ transaction.amount }} BTC</span>
-                                <span>for {{ transaction.initial_value }}$</span>
-                            </row>
-                        </div>
-                    </a>
-                </div>
-                
-                {% endfor %}
             {% endif %}
         </section>
         <!-- form to add transactions -->
@@ -122,13 +134,23 @@
         </section>
         <br>
     </div>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            var rows = document.querySelectorAll(".clickable-row");
+    
+            rows.forEach(function (row) {
+                row.addEventListener("click", function () {
+                    window.location.href = row.dataset.href;
+                });
+            });
+        });
+    </script>
 {% else %}
 <div class="alert alert-danger alert-dismissible fade show mx-5" role="alert">
     You are not authorized to view this!
     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
 {% endif %}
-   
 {% endblock %}
 
 

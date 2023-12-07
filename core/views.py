@@ -103,8 +103,12 @@ def logout_user(request):
 @login_required
 def portfolio(request, pk):
     portfolio = Portfolio.objects.get(id=pk)
-    metrics = PortfolioMetrics.objects.get(portfolio=pk)
 
+    if request.user.id != portfolio.user.id:
+        messages.success(request, ("You are not authorized to view this!"))
+        return redirect("index")
+
+    metrics = PortfolioMetrics.objects.get(portfolio=pk)
     # CryptoCompare API endpoint for price data
     endpoint = "https://min-api.cryptocompare.com/data/price"
 
