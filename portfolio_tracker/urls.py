@@ -23,6 +23,7 @@ from core.views import (
     login_user,
     register,
     logout_user,
+    delete_portfolio,
 )
 
 urlpatterns = [
@@ -30,6 +31,7 @@ urlpatterns = [
     path("", index, name="index"),
     path("transaction/<int:pk>", transaction_view, name="transaction"),
     path("portfolio/<int:pk>", portfolio, name="portfolio"),
+    path("portfolio/delete/<int:pk>", delete_portfolio, name="delete_portfolio"),
     path("login/", login_user, name="login_user"),
     path("logout/", logout_user, name="logout_user"),
     path("register/", register, name="register"),

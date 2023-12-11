@@ -2,155 +2,177 @@
 
 {% block content %}
 
-{% if request.user.id == portfolio.user.id %}
-
-    <div class="container">
-        <!-- Section to display dashboards with information -->
-        {% if transactions %}
-            <section> 
-            <h5>Portfolio Name</h5>
-            <div class="row">
-                <div class="col-md">
-                    <table class="table table-borderless">
-                        <tbody>
-                        <tr>
-                        <td>Current Amount</td>
-                        <td>{{ metrics.BTC_amount|floatformat:8 }} BTC</td>
-                        </tr>
-                        <tr>
-                        <td>Average Purchase Price</td>
-                        <td>{{ average_price|floatformat:0 }}$</td>
-                        </tr>
-                        <tr>
-                        <td>Current ROI</td>
-                        <td>
-                            <button type="button" class="btn {% if current_ROI > 0 %}btn-success{% else %}btn-danger{% endif %} btn-sm">
-                                {{ current_ROI|floatformat:2 }}%
-                            </button>
-                        </td>
-                        </tr>
-                    </tbody>
-                    </table>
+<div class="container">
+    <!-- Section to display dashboards with information -->
+    {% if transactions %}
+        <section>
+            <div class="row my-2">
+                <div class="col-6 d-flex justify-content-start">
+                    <h5>{{ portfolio.name }}</h5>
                 </div>
-                <div class="col-md">
-                    <table class="table table-borderless">
-                        <tbody>
-                        <tr>
-                        <td>Invested</td>
-                        <td>{{ metrics.USD_invested|floatformat:0 }}$</td>
-                        </tr>
-                        <tr>
-                        <td>Current Value</td>
-                        <td>{{ current_value|floatformat:0 }}$</td>
-                        </tr>
-                        <tr>
-                        <td>Net Result (USD)</td>
-                        <td>
-                            <button type="button" class="btn {% if net_result > 0 %}btn-success{% else %}btn-danger{% endif %} btn-sm">{{ net_result|floatformat:0 }}$</button>
-                        </td>
-                        </tr>
-                    </tbody>
-                    </table>
-                </div>
-                <div class="col-md">
-                    <table class="table table-borderless rounded">
-                        <tbody>
-                        <tr>
-                        <td>Min ROI</td>
-                        <td>
-                            <span class="d-inline">{{ minROI|floatformat:0 }}%</span>
-                            <span class="d-inline small text-muted"><small>({{ minROI_date|date:"d-M-Y" }})</small></span>
-                        </td>
-                        </tr>
-                        <tr>
-                        <td>Max ROI</td>
-                        <td>
-                            <span class="d-inline">{{ maxROI|floatformat:0 }}%</span>
-                            <span class="d-inline small text-muted"><small>({{ maxROI_date|date:"d-M-Y" }})</small></span>
-                        </td>
-                        </tr>
-                        <tr>
-                        <td>Current BTC price</td>
-                        <td><button type="button" class="btn btn-sm" style="background-color:#f7931a;">{{ current_price|floatformat:0 }}$</button></td>
-                        </tr>
-                    </tbody>
-                    </table>
+                <div class="col-6 d-flex justify-content-end">
+                    <a href="{% url 'delete_portfolio' portfolio.id %}" title="Delete Portfolio" onclick="return confirmDelete();">
+                        <button type="button" class="btn-close"></button>
+                    </a>
                 </div>
             </div>
-            </section>
-  
-            <!-- Section to display portfolio ROI graph -->
-            <section>
-                {{ graph_html|safe }}
-            </section>
-        {% else %}
-        {% endif %}
-        <!-- Section to display transactions -->
-        <section>
-            {% if transactions %}
-            <div class="container mt-4 col-8">
-                <h5 class="text-center">My Transactions</h5>
-                <table class="table table-hover table-borderless table-striped">
-                    <thead class="table-secondary">
-                        <tr>
-                            <th>Transaction ID</th>
-                            <th>Date of Purchase</th>
-                            <th>BTC Amount</th>
-                            <th>USD Cost</th>
-                        </tr>
-                    </thead>
+        
+        <div class="row">
+            <div class="col-md">
+                <table class="table table-borderless">
                     <tbody>
-                        {% for transaction in transactions %}
-                        <a href="{% url 'transaction' transaction.id %}" class="text-decoration-none">
-                            <tr class="clickable-row" data-href="{% url 'transaction' transaction.id %}" style="cursor: pointer;">
-                                <th scope="row">#{{ transaction.id }}</th>
-                                <td>{{ transaction.timestamp|date:"d-M-Y" }}</td>
-                                <td>{{ transaction.amount }} BTC</td>
-                                <td>{{ transaction.initial_value }}$</td>
-                            </tr>
-                        </a>
-                        {% endfor %}
-                    </tbody>
+                    <tr>
+                    <td>Current Amount</td>
+                    <td>{{ metrics.BTC_amount|floatformat:8 }} BTC</td>
+                    </tr>
+                    <tr>
+                    <td>Average Purchase Price</td>
+                    <td>{{ average_price|floatformat:0 }}$</td>
+                    </tr>
+                    <tr>
+                    <td>Current ROI</td>
+                    <td>
+                        <button type="button" class="btn {% if current_ROI > 0 %}btn-success{% else %}btn-danger{% endif %} btn-sm">
+                            {{ current_ROI|floatformat:2 }}%
+                        </button>
+                    </td>
+                    </tr>
+                </tbody>
                 </table>
             </div>
-                        
-                    
-
-                
-            {% endif %}
-        </section>
-        <!-- form to add transactions -->
-
-        <section class="container d-flex align-items-center justify-content-center pt-5">
-            <div class="text-center">
-                <h2>Add Transaction</h2>
-                <form method="post" enctype="multipart/form-data">
-                    {% csrf_token %}
-                    {{ form.as_p }}
-                    <button type="submit" class="btn" style="background-color:#f7931a;">Add Transaction</button>
-                    
-                </form>
+            <div class="col-md">
+                <table class="table table-borderless">
+                    <tbody>
+                    <tr>
+                    <td>Invested</td>
+                    <td>{{ metrics.USD_invested|floatformat:0 }}$</td>
+                    </tr>
+                    <tr>
+                    <td>Current Value</td>
+                    <td>{{ current_value|floatformat:0 }}$</td>
+                    </tr>
+                    <tr>
+                    <td>Net Result (USD)</td>
+                    <td>
+                        <button type="button" class="btn {% if net_result > 0 %}btn-success{% else %}btn-danger{% endif %} btn-sm">{{ net_result|floatformat:0 }}$</button>
+                    </td>
+                    </tr>
+                </tbody>
+                </table>
             </div>
+            <div class="col-md">
+                <table class="table table-borderless rounded">
+                    <tbody>
+                    <tr>
+                    <td>Min ROI</td>
+                    <td>
+                        <span class="d-inline">{{ minROI|floatformat:0 }}%</span>
+                        <span class="d-inline small text-muted"><small>({{ minROI_date|date:"d-M-Y" }})</small></span>
+                    </td>
+                    </tr>
+                    <tr>
+                    <td>Max ROI</td>
+                    <td>
+                        <span class="d-inline">{{ maxROI|floatformat:0 }}%</span>
+                        <span class="d-inline small text-muted"><small>({{ maxROI_date|date:"d-M-Y" }})</small></span>
+                    </td>
+                    </tr>
+                    <tr>
+                    <td>Current BTC price</td>
+                    <td><button type="button" class="btn btn-sm" style="background-color:#f7931a;">{{ current_price|floatformat:0 }}$</button></td>
+                    </tr>
+                </tbody>
+                </table>
+            </div>
+        </div>
         </section>
-        <br>
-    </div>
-    <script>
-        document.addEventListener("DOMContentLoaded", function () {
-            var rows = document.querySelectorAll(".clickable-row");
+
+        <!-- Section to display portfolio ROI graph -->
+        <section>
+            {{ graph_html|safe }}
+        </section>
+    {% else %}
+    {% endif %}
+    <!-- Section to display transactions -->
+    <section>
+        {% if transactions %}
+        <div class="container mt-4 col-8">
+            <h5 class="text-center">My Transactions</h5>
+            <table class="table table-hover table-borderless table-striped">
+                <thead class="table-secondary">
+                    <tr>
+                        <th>Transaction ID</th>
+                        <th>Date of Purchase</th>
+                        <th>BTC Amount</th>
+                        <th>USD Cost</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for transaction in transactions %}
+                    <a href="{% url 'transaction' transaction.id %}" class="text-decoration-none">
+                        <tr class="clickable-row" data-href="{% url 'transaction' transaction.id %}" style="cursor: pointer;">
+                            <th scope="row">#{{ transaction.id }}</th>
+                            <td>{{ transaction.timestamp|date:"d-M-Y" }}</td>
+                            <td>{{ transaction.amount }} BTC</td>
+                            <td>{{ transaction.initial_value }}$</td>
+                        </tr>
+                    </a>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+    </section>
+    <!-- form to add transactions -->
+    {% if form.timestamp.errors %}
+        <div class="alert alert-warning alert-dismissible fade show mx-5" role="alert">{{ form.timestamp.errors.0 }}</div>
+    {% endif %}
+    {% if form.amount.errors %}
+        <div class="alert alert-warning alert-dismissible fade show mx-5" role="alert">{{ form.amount.errors.0 }}</div>
+    {% endif %}
     
-            rows.forEach(function (row) {
-                row.addEventListener("click", function () {
-                    window.location.href = row.dataset.href;
-                });
+    <section class="container d-flex align-items-center justify-content-center pt-5">
+        <div class="text-center">
+            <h2>Add Transaction</h2>
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="form-group">
+                    {{ form.timestamp.label_tag }}
+                    {{ form.timestamp }}
+                </div>
+              
+                  <!-- Amount Field -->
+                  <div class="form-group">
+                    {{ form.amount.label_tag }}
+                    {{ form.amount }}
+                  </div>
+                <button type="submit" class="btn mt-3" style="background-color:#f7931a;">Add Transaction</button>
+                
+            </form>
+        </div>
+        <div>
+            <button type="submit" class="btn mt-3"></button>
+        </div>
+    </section>
+    <br>
+</div>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        var rows = document.querySelectorAll(".clickable-row");
+
+        rows.forEach(function (row) {
+            row.addEventListener("click", function () {
+                window.location.href = row.dataset.href;
             });
         });
-    </script>
-{% else %}
-<div class="alert alert-danger alert-dismissible fade show mx-5" role="alert">
-    You are not authorized to view this!
-    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-{% endif %}
+    });
+</script>
+<script>
+    function confirmDelete() {
+        var result = confirm("Are you sure you want to delete this portfolio?");
+        return result;
+    }
+</script>
 {% endblock %}
 
 

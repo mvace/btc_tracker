@@ -33,10 +33,14 @@ class Transaction(models.Model):
     )
     timestamp_unix = models.IntegerField(null=True, blank=True)
     daily_timestamp = models.IntegerField(null=True, blank=True)
-    amount = models.DecimalField(max_digits=16, decimal_places=8)
+    amount = models.DecimalField(
+        max_digits=16,
+        decimal_places=8,
+        validators=[MinValueValidator(0.0000001), MaxValueValidator(100000)],
+    )
     price = models.DecimalField(max_digits=16, decimal_places=8, null=True, blank=True)
     initial_value = models.DecimalField(
-        max_digits=16, decimal_places=2, null=True, blank=True
+        max_digits=16, decimal_places=8, null=True, blank=True
     )
 
     def get_current_value(self):
@@ -95,6 +99,7 @@ class Portfolio(models.Model):
         start_date = transactions.first().daily_timestamp
         daily_data = DailyClosePrice.objects.filter(daily_timestamp__gte=start_date)
 
+        metrics.roi_dict = {}
         for day in daily_data:
             cumulative_data = transactions.filter(
                 timestamp_unix__lte=day.daily_timestamp
@@ -114,12 +119,10 @@ class Portfolio(models.Model):
                     output_field=DecimalField(),
                 ),
             )
-
             # Store ROI data for each day
             metrics.roi_dict[day.daily_timestamp] = str(
                 cumulative_data["roi"] or Decimal("0")
             )
-
             roi_values = [(key, float(val)) for key, val in metrics.roi_dict.items()]
 
             max_roi = max(roi_values, key=lambda x: x[1])

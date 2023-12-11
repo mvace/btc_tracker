@@ -100,6 +100,16 @@ def logout_user(request):
     return redirect("index")
 
 
+def delete_portfolio(request, pk):
+    portfolio = Portfolio.objects.get(id=pk)
+    if request.user.id != portfolio.user.id:
+        messages.success(request, ("You are not authorized to do this!"))
+        return redirect("index")
+    portfolio.delete()
+    messages.success(request, (f"Portfolio {portfolio.name} was deleted."))
+    return redirect("index")
+
+
 @login_required
 def portfolio(request, pk):
     portfolio = Portfolio.objects.get(id=pk)
@@ -108,40 +118,48 @@ def portfolio(request, pk):
         messages.success(request, ("You are not authorized to view this!"))
         return redirect("index")
 
-    metrics = PortfolioMetrics.objects.get(portfolio=pk)
-    # CryptoCompare API endpoint for price data
-    endpoint = "https://min-api.cryptocompare.com/data/price"
-
-    # Parameters for the API request
-    params = {
-        "fsym": "BTC",  # From symbol (Bitcoin)
-        "tsyms": "USD",  # To symbol (US Dollar)
-        "api_key": api_key,
-    }
-
-    # Making the API request
-    response = requests.get(endpoint, params=params)
-    # Parse the JSON response
-    data = response.json()
-    # Extract the Bitcoin price in USD
-    current_price = Decimal(data["USD"])
-    current_value = metrics.BTC_amount * current_price
-    print(f"CV: {current_value}")
-    net_result = current_value - metrics.USD_invested
-    current_ROI = ((current_value - metrics.USD_invested) / metrics.USD_invested) * 100
-
     if request.method == "POST":
-        form = TransactionForm(request.POST or None)
+        form = TransactionForm(request.POST)
         if form.is_valid():
             transaction = form.save(commit=False)
             transaction.portfolio = portfolio
             transaction.save()
             messages.success(request, ("Transaction Added"))
-        return redirect(request.META.get("HTTP_REFERER"))
+            return redirect(request.META.get("HTTP_REFERER"))
+        return render(request, "core/portfolio.html", {"form": form})
 
     else:
-        transactions = Transaction.objects.filter(portfolio=pk)
+        # CryptoCompare API endpoint for price data
+        transactions = Transaction.objects.filter(portfolio=pk).order_by(
+            "daily_timestamp"
+        )
+        # print(transactions)
+        if len(transactions) == 0:
+            form = TransactionForm()
+
+            return render(request, "core/portfolio_empty.html", {"form": form})
+
         metrics = PortfolioMetrics.objects.get(portfolio_id=pk)
+        endpoint = "https://min-api.cryptocompare.com/data/price"
+
+        # Parameters for the API request
+        params = {
+            "fsym": "BTC",  # From symbol (Bitcoin)
+            "tsyms": "USD",  # To symbol (US Dollar)
+            "api_key": api_key,
+        }
+
+        # Making the API request
+        response = requests.get(endpoint, params=params)
+        # Parse the JSON response
+        data = response.json()
+        # Extract the Bitcoin price in USD
+        current_price = Decimal(data["USD"])
+        current_value = metrics.BTC_amount * current_price
+        net_result = current_value - metrics.USD_invested
+        current_ROI = (
+            (current_value - metrics.USD_invested) / metrics.USD_invested
+        ) * 100
         roi_data_dict = metrics.roi_dict
 
         # Create main and highlight data for the plot
@@ -209,7 +227,7 @@ def portfolio(request, pk):
         # Convert the plot to HTML
         graph_html = fig.to_html(full_html=False)
 
-        form = TransactionForm(request.POST or None)
+        form = TransactionForm()
 
         # Render the portfolio template with data
         return render(

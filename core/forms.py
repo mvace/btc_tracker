@@ -3,6 +3,7 @@ from django.forms import DateTimeInput
 from .models import Transaction, Portfolio
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
 
 
 class PortfolioForm(forms.ModelForm):
@@ -22,6 +23,16 @@ class PortfolioForm(forms.ModelForm):
     )
 
 
+def validate_amount_range(value):
+    min_amount = 0.00000001
+    max_amount = 100000
+
+    if value < min_amount or value > max_amount:
+        raise ValidationError(
+            f"Amount must be between {min_amount:.8f} and {max_amount}."
+        )
+
+
 class TransactionForm(forms.ModelForm):
     timestamp = forms.DateTimeField(
         label="Select Transaction Date and Time",
@@ -36,11 +47,12 @@ class TransactionForm(forms.ModelForm):
 
     amount = forms.DecimalField(
         label="",
+        validators=[validate_amount_range],
         widget=forms.NumberInput(
             attrs={
                 "class": "form-control",
                 "placeholder": "Enter the amount",
-                "step": "0.01",
+                "step": "0.001",
             }
         ),
     )
