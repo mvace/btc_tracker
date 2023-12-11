@@ -110,6 +110,16 @@ def delete_portfolio(request, pk):
     return redirect("index")
 
 
+def delete_transaction(request, pk):
+    transaction = Transaction.objects.get(id=pk)
+    if request.user.id != transaction.portfolio.user.id:
+        messages.success(request, ("You are not authorized to do this!"))
+        return redirect("index")
+    transaction.delete()
+    messages.success(request, (f"Transaction #{pk} was deleted."))
+    return redirect("index")
+
+
 @login_required
 def portfolio(request, pk):
     portfolio = Portfolio.objects.get(id=pk)

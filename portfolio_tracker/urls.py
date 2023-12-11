@@ -24,12 +24,14 @@ from core.views import (
     register,
     logout_user,
     delete_portfolio,
+    delete_transaction,
 )
 
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("", index, name="index"),
     path("transaction/<int:pk>", transaction_view, name="transaction"),
+    path("transaction/delete/<int:pk>", delete_transaction, name="delete_transaction"),
     path("portfolio/<int:pk>", portfolio, name="portfolio"),
     path("portfolio/delete/<int:pk>", delete_portfolio, name="delete_portfolio"),
     path("login/", login_user, name="login_user"),
