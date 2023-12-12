@@ -5,36 +5,38 @@
 
 <div class="container mt-4">
     <div class="row">
-        <div class="col-9 bg-white">
+        <div class="col-md-9 bg-white">
             <h5 class="text-center p-4">My Portfolios</h5>
-            <table class="table table-hover table-borderless">
-                <thead class="table-secondary">
-                    <tr>
-                        <th>Portfolio</th>
-                        <th>BTC Total Amount</th>
-                        <th>USD Invested</th>
-                        <th>Current Value</th>
-                        <th>ROI</th>
-                        
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for portfolio in portfolios %}
-                    <a href="{% url 'portfolio' portfolio.id %}" class="text-decoration-none">
-                        <tr class="clickable-row" data-href="{% url 'portfolio' portfolio.id %}" style="cursor: pointer;">
-                            <th scope="row">{{ portfolio.name }}</th>
-                            {% if portfolio.metrics.BTC_amount %}<td>{{ portfolio.metrics.BTC_amount }} BTC</td>{% else %}<td>N/A</td>{% endif %}
-                            {% if portfolio.metrics.USD_invested %}<td>{{ portfolio.metrics.USD_invested }} BTC</td>{% else %}<td>N/A</td>{% endif %}
-                            {% if portfolio.metrics.BTC_amount %}<td>{{ portfolio.metrics.BTC_amount }} BTC</td>{% else %}<td>N/A</td>{% endif %}
-                            {% if portfolio.metrics.BTC_amount %}<td>{{ portfolio.metrics.BTC_amount }} BTC</td>{% else %}<td>N/A</td>{% endif %}
+            <div class="table-responsive">
+                <table class="table table-hover table-borderless">
+                    <thead class="table-secondary">
+                        <tr>
+                            <th>Portfolio</th>
+                            <th>BTC Total Amount</th>
+                            <th>USD Invested</th>
+                            <th>Current Value</th>
+                            <th>ROI</th>
+                            
                         </tr>
-                    </a>
+                    </thead>
+                    <tbody>
+                        {% for portfolio in portfolios %}
+                        <a href="{% url 'portfolio' portfolio.id %}" class="text-decoration-none">
+                            <tr class="clickable-row" data-href="{% url 'portfolio' portfolio.id %}" style="cursor: pointer;">
+                                <th scope="row">{{ portfolio.name }}</th>
+                                {% if portfolio.metrics.BTC_amount %}<td>{{ portfolio.metrics.BTC_amount }} BTC</td>{% else %}<td>N/A</td>{% endif %}
+                                {% if portfolio.metrics.USD_invested %}<td>${{ portfolio.metrics.USD_invested|floatformat:0 }}</td>{% else %}<td>N/A</td>{% endif %}
+                                {% if portfolio.get_current_value %}<td>${{ portfolio.get_current_value|floatformat:0 }}</td>{% else %}<td>N/A</td>{% endif %}
+                                {% if portfolio.get_current_roi %}<td ><button type="button" class="btn btn-sm {% if portfolio.get_current_roi > 0 %}btn-success{% else %} btn-danger{% endif %}"> {{ portfolio.get_current_roi|floatformat:0 }}%</button></td>{% else %}<td>N/A</td>{% endif %}
+                            </tr>
+                        </a>
 
-                    {% endfor %}
-                </tbody>
-            </table>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
-        <div class="col-3">
+        <div class="col-md-3">
             <div class="text-center p-4 bg-white">
                 <h5>Create New Portfolio:</h5>     
                 <form method="post" enctype="multipart/form-data">
@@ -45,11 +47,57 @@
                     <button type="submit" class="btn my-2" style="background-color:#f7931a;">Create</button>
                 </form>
             </div>
+            <div class="text-center mt-2 p-4 bg-white text-secondary">
+                <h5>Current BTC Price:</h5>
+                <h1>${{ current_price|floatformat:0 }}</h1>
+            </div>
         </div>
     </div>
 </div>
-<section class="container d-flex align-items-center justify-content-center">
-
+<section >
+    {% if transactions %}
+    <div class="container">
+        <div class="row">
+            <div class="mt-4 col-9 bg-white">
+                <h5 class="text-center p-4">My Transactions</h5>
+                <table class="table table-hover table-borderless">
+                    <thead class="table-secondary">
+                        <tr>
+                            <th>Transaction ID</th>
+                            <th>Portfolio</th>
+                            <th>Date of Purchase</th>
+                            <th>BTC Amount</th>
+                            <th>USD Cost</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for transaction in transactions %}
+                        <a href="{% url 'transaction' transaction.id %}" class="text-decoration-none">
+                            <tr class="clickable-row" data-href="{% url 'transaction' transaction.id %}" style="cursor: pointer;">
+                                <th scope="row">#{{ transaction.id }}</th>
+                                <td>{{ transaction.portfolio.name }}</td>
+                                <td>{{ transaction.timestamp|date:"d-M-Y" }}</td>
+                                <td>{{ transaction.amount }} BTC</td>
+                                <td>{{ transaction.initial_value|floatformat:2 }}$</td>
+                            </tr>
+                        </a>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="col-md-3 mt-4 text-secondary">
+                <div class="text-center p-4 bg-white">
+                    <h5>Overall Invested:</h5>
+                    <h1>${{ overall_invested|floatformat:0 }}</h1>
+                </div>
+                <div class="text-center mt-2 p-4 bg-white">
+                    <h5>Overall Net Result:</h5>
+                    <h1>${{ overall_net_result|floatformat:0 }} {% if overall_net_result > 0 %}<i class="bi bi-arrow-up-circle-fill" style="color: #198754;">{% else %}<i class="bi bi-arrow-up-circle-fill" style="color: #DC3545;">{% endif %}</i></h1>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 </section>
 
 <script>

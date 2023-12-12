@@ -10,6 +10,21 @@ import requests
 
 api_key = "71519726c4ebf2d4f41b3687d06386ba7c3a07d41ed4e1db77d2394e6b0fd540"
 cryptocompare.cryptocompare._set_api_key_parameter(api_key)
+cryptocompare.cryptocompare._set_api_key_parameter(api_key)
+endpoint = "https://min-api.cryptocompare.com/data/price"
+
+# Parameters for the API request
+params = {
+    "fsym": "BTC",  # From symbol (Bitcoin)
+    "tsyms": "USD",  # To symbol (US Dollar)
+    "api_key": api_key,
+}
+# Making the API request
+response = requests.get(endpoint, params=params)
+# Parse the JSON response
+data = response.json()
+# Extract the Bitcoin price in USD
+current_price = Decimal(data["USD"])
 
 
 class DailyClosePrice(models.Model):
@@ -34,13 +49,13 @@ class Transaction(models.Model):
     timestamp_unix = models.IntegerField(null=True, blank=True)
     daily_timestamp = models.IntegerField(null=True, blank=True)
     amount = models.DecimalField(
-        max_digits=16,
+        max_digits=32,
         decimal_places=8,
         validators=[MinValueValidator(0.0000001), MaxValueValidator(100000)],
     )
-    price = models.DecimalField(max_digits=16, decimal_places=8, null=True, blank=True)
+    price = models.DecimalField(max_digits=32, decimal_places=8, null=True, blank=True)
     initial_value = models.DecimalField(
-        max_digits=16, decimal_places=8, null=True, blank=True
+        max_digits=32, decimal_places=8, null=True, blank=True
     )
 
     def get_current_value(self):
@@ -134,14 +149,26 @@ class Portfolio(models.Model):
             metrics.BTC_amount = transactions_data["BTC_amount"]
             metrics.save()
 
+    def get_current_value(self):
+        current_value = current_price * self.metrics.BTC_amount
+        return current_value
+
+    def get_current_roi(self):
+        current_value = self.get_current_value()
+        roi = (
+            (current_value - self.metrics.USD_invested) / self.metrics.USD_invested
+        ) * 100
+
+        return roi
+
 
 class PortfolioMetrics(models.Model):
     portfolio = models.OneToOneField(
         Portfolio, on_delete=models.CASCADE, related_name="metrics"
     )
-    average_price = models.DecimalField(max_digits=20, decimal_places=2, null=True)
+    average_price = models.DecimalField(max_digits=32, decimal_places=2, null=True)
     roi_dict = models.JSONField(default=dict)
     max_roi = models.JSONField(null=True)
     min_roi = models.JSONField(null=True)
-    USD_invested = models.DecimalField(max_digits=20, decimal_places=2, null=True)
-    BTC_amount = models.DecimalField(max_digits=20, decimal_places=8, null=True)
+    USD_invested = models.DecimalField(max_digits=32, decimal_places=2, null=True)
+    BTC_amount = models.DecimalField(max_digits=32, decimal_places=8, null=True)
