@@ -136,7 +136,9 @@ class Portfolio(models.Model):
 
 
 class PortfolioMetrics(models.Model):
-    portfolio = models.OneToOneField(Portfolio, on_delete=models.CASCADE)
+    portfolio = models.OneToOneField(
+        Portfolio, on_delete=models.CASCADE, related_name="metrics"
+    )
     average_price = models.DecimalField(max_digits=20, decimal_places=2, null=True)
     roi_dict = models.JSONField(default=dict)
     max_roi = models.JSONField(null=True)

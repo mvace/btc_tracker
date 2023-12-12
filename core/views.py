@@ -14,6 +14,20 @@ import requests
 
 api_key = "71519726c4ebf2d4f41b3687d06386ba7c3a07d41ed4e1db77d2394e6b0fd540"
 cryptocompare.cryptocompare._set_api_key_parameter(api_key)
+endpoint = "https://min-api.cryptocompare.com/data/price"
+
+# Parameters for the API request
+params = {
+    "fsym": "BTC",  # From symbol (Bitcoin)
+    "tsyms": "USD",  # To symbol (US Dollar)
+    "api_key": api_key,
+}
+# Making the API request
+response = requests.get(endpoint, params=params)
+# Parse the JSON response
+data = response.json()
+# Extract the Bitcoin price in USD
+current_price = Decimal(data["USD"])
 
 
 @login_required
@@ -147,24 +161,13 @@ def portfolio(request, pk):
         if len(transactions) == 0:
             form = TransactionForm()
 
-            return render(request, "core/portfolio_empty.html", {"form": form})
+            return render(
+                request,
+                "core/portfolio_empty.html",
+                {"form": form, "portfolio": portfolio},
+            )
 
         metrics = PortfolioMetrics.objects.get(portfolio_id=pk)
-        endpoint = "https://min-api.cryptocompare.com/data/price"
-
-        # Parameters for the API request
-        params = {
-            "fsym": "BTC",  # From symbol (Bitcoin)
-            "tsyms": "USD",  # To symbol (US Dollar)
-            "api_key": api_key,
-        }
-
-        # Making the API request
-        response = requests.get(endpoint, params=params)
-        # Parse the JSON response
-        data = response.json()
-        # Extract the Bitcoin price in USD
-        current_price = Decimal(data["USD"])
         current_value = metrics.BTC_amount * current_price
         net_result = current_value - metrics.USD_invested
         current_ROI = (
