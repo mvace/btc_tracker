@@ -81,28 +81,6 @@
             </div>
         </div>
 </footer>
-<script>
-  document.addEventListener("DOMContentLoaded", function() {
-    // Get the logout button element
-    var logoutButton = document.getElementById("logoutButton");
-
-    // Add a click event listener to the logout button
-    if (logoutButton) {
-      logoutButton.addEventListener("click", function(event) {
-        // Display a confirmation prompt
-        var confirmed = confirm("Are you sure you want to logout?");
-        
-        // If the user confirms, proceed with the logout
-        if (confirmed) {
-          window.location.href = "{% url 'logout_user' %}";
-        } else {
-          // If the user cancels, prevent the default behavior (logout)
-          event.preventDefault();
-        }
-      });
-    }
-  });
-</script>
 </html>
 
 
