@@ -34,7 +34,9 @@
                 {{ user }}
               </li>
               <li class="nav-item me-2">
-                <a href="{% url 'logout_user' %}"><button type="button" class="btn btn-dark btn-sm">Logout</button></a>
+                <a href="{% url 'logout_user' %}" id="logoutButton">
+                  <button type="button" class="btn btn-dark btn-sm">Logout</button>
+                </a>
               </li>
               {% else %}
               <li class="nav-item me-2">
@@ -81,6 +83,28 @@
             </div>
         </div>
 </footer>
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    // Get the logout button element
+    var logoutButton = document.getElementById("logoutButton");
+
+    // Add a click event listener to the logout button
+    if (logoutButton) {
+      logoutButton.addEventListener("click", function(event) {
+        // Display a confirmation prompt
+        var confirmed = confirm("Are you sure you want to logout?");
+        
+        // If the user confirms, proceed with the logout
+        if (confirmed) {
+          window.location.href = "{% url 'logout_user' %}";
+        } else {
+          // If the user cancels, prevent the default behavior (logout)
+          event.preventDefault();
+        }
+      });
+    }
+  });
+</script>
 </html>
 
 
