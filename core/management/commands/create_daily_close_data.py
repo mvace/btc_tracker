@@ -1,5 +1,5 @@
 from django.core.management.base import BaseCommand
-from core.models import DailyClosePrice
+from core.models import DailyClosePrice, Portfolio
 import cryptocompare
 
 
@@ -14,5 +14,9 @@ class Command(BaseCommand):
                 daily_timestamp=record["time"],
                 close_price=record["close"],
             )
+
+        portfolios = Portfolio.objects.all()
+        for portfolio in portfolios:
+            portfolio.update_metrics()
 
         self.stdout.write(self.style.SUCCESS("Successfully ran your custom command"))

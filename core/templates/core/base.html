@@ -11,8 +11,7 @@
     <nav class="navbar navbar-expand-lg bg-body-tertiary">
       <div class="container-fluid" style="background-color:#f7931a;">
         <a class="navbar-brand" href="{% url 'index' %}">
-          <i class="bi bi-currency-bitcoin"></i>
-          Portfolio Tracker
+          <img src="{% static 'core/BTC logo18-black.png' %}" alt="">
         </a>
         <!-- The button does not work  -->
         <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarText" aria-controls="navbarText" aria-expanded="false" aria-label="Toggle navigation">
@@ -21,7 +20,10 @@
         <div class="collapse navbar-collapse" id="navbarText">
           <ul class="navbar-nav me-auto mb-2 mb-lg-0">
             <li class="nav-item">
-              <a class="nav-link active" aria-current="page" href="#">Portfolio</a>
+              <a class="nav-link active" aria-current="page" href="#">About</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link active" aria-current="page" href="#">Contact</a>
             </li>
           </ul>
           <span class="navbar-text">
@@ -70,7 +72,7 @@
                 <small class="ps-2">© 2023 created by mvace</small>
             </div>
             <div class="col-md-4 text-center">
-                <a href="https://www.cryptocompare.com/"><img src="{% static 'core/JPEG24.jpg' %}" alt=""></a>
+                <a href="https://www.cryptocompare.com/"><img src="{% static 'core/JPEG24.jpg' %}"></a>
             </div>
             <div class="col-md-4 d-flex justify-content-end">
                 <!-- Elements on the right -->
@@ -79,6 +81,28 @@
             </div>
         </div>
 </footer>
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    // Get the logout button element
+    var logoutButton = document.getElementById("logoutButton");
+
+    // Add a click event listener to the logout button
+    if (logoutButton) {
+      logoutButton.addEventListener("click", function(event) {
+        // Display a confirmation prompt
+        var confirmed = confirm("Are you sure you want to logout?");
+        
+        // If the user confirms, proceed with the logout
+        if (confirmed) {
+          window.location.href = "{% url 'logout_user' %}";
+        } else {
+          // If the user cancels, prevent the default behavior (logout)
+          event.preventDefault();
+        }
+      });
+    }
+  });
+</script>
 </html>
 
 

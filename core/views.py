@@ -33,6 +33,7 @@ current_price = Decimal(data["USD"])
 @login_required
 def index(request):
     portfolios = Portfolio.objects.filter(user=request.user.id)
+    form = PortfolioForm()
 
     if request.method == "POST":
         form = PortfolioForm(request.POST)
@@ -43,13 +44,17 @@ def index(request):
             messages.success(request, ("Portfolio Created"))
             return redirect("index")
     else:
+        if len(portfolios) == 0:
+            return render(
+                request,
+                "core/index_empty.html",
+                {"form": form, "current_price": current_price},
+            )
         transactions = Transaction.objects.filter(portfolio_id__in=portfolios)
         metrics = PortfolioMetrics.objects.filter(portfolio__in=portfolios)
         overall = metrics.aggregate(Sum("USD_invested"), Sum("BTC_amount"))
-        overall_current_value = overall["BTC_amount__sum"] * current_price
-        overall_net_result = overall_current_value - overall["USD_invested__sum"]
-
-        form = PortfolioForm()
+        overall_current_value = (overall["BTC_amount__sum"] or 0) * current_price
+        overall_net_result = overall_current_value - (overall["USD_invested__sum"] or 0)
 
     return render(
         request,
@@ -140,6 +145,7 @@ def delete_portfolio(request, pk):
 
 def delete_transaction(request, pk):
     transaction = Transaction.objects.get(id=pk)
+
     if request.user.id != transaction.portfolio.user.id:
         messages.success(request, ("You are not authorized to do this!"))
         return redirect("index")
