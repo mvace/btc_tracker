@@ -14,6 +14,7 @@ class Command(BaseCommand):
                 daily_timestamp=record["time"],
                 close_price=record["close"],
             )
+            
 
         portfolios = Portfolio.objects.all()
         for portfolio in portfolios:
