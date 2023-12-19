@@ -1,5 +1,4 @@
 from datetime import timedelta, datetime
-import cryptocompare
 from django.contrib.auth.models import User
 from django.db import models
 from django.db.models import F, ExpressionWrapper, DecimalField, Sum
@@ -9,8 +8,6 @@ from decimal import Decimal
 import requests
 
 api_key = "71519726c4ebf2d4f41b3687d06386ba7c3a07d41ed4e1db77d2394e6b0fd540"
-cryptocompare.cryptocompare._set_api_key_parameter(api_key)
-cryptocompare.cryptocompare._set_api_key_parameter(api_key)
 endpoint = "https://min-api.cryptocompare.com/data/price"
 
 # Parameters for the API request
@@ -59,7 +56,6 @@ class Transaction(models.Model):
     )
 
     def get_current_value(self):
-        current_price = Decimal(cryptocompare.get_price("BTC", "USD")["BTC"]["USD"])
         return current_price * self.amount
 
     def save(self, *args, **kwargs):
@@ -81,7 +77,6 @@ class Transaction(models.Model):
         price = data["Data"]["Data"][1]["close"]
         self.price = Decimal(price)
 
-        # self.price = Decimal(cryptocompare.get_historical_price_hour("BTC", "USD", limit=1, toTs=self.timestamp[1]["close"])
         self.initial_value = self.amount * self.price
 
         super().save(*args, **kwargs)

@@ -1,6 +1,5 @@
 from datetime import datetime
 from decimal import Decimal
-import cryptocompare
 import plotly.graph_objects as go
 from django.db.models import F, ExpressionWrapper, DecimalField, Sum
 from django.shortcuts import render, redirect
@@ -13,7 +12,6 @@ from .forms import TransactionForm
 import requests
 
 api_key = "71519726c4ebf2d4f41b3687d06386ba7c3a07d41ed4e1db77d2394e6b0fd540"
-cryptocompare.cryptocompare._set_api_key_parameter(api_key)
 endpoint = "https://min-api.cryptocompare.com/data/price"
 
 # Parameters for the API request
