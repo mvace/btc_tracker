@@ -14,22 +14,21 @@ import requests
 api_key = "71519726c4ebf2d4f41b3687d06386ba7c3a07d41ed4e1db77d2394e6b0fd540"
 endpoint = "https://min-api.cryptocompare.com/data/price"
 
-# Parameters for the API request
-params = {
-    "fsym": "BTC",  # From symbol (Bitcoin)
-    "tsyms": "USD",  # To symbol (US Dollar)
-    "api_key": api_key,
-}
-# Making the API request
-response = requests.get(endpoint, params=params)
-# Parse the JSON response
-data = response.json()
-# Extract the Bitcoin price in USD
-current_price = Decimal(data["USD"])
-
 
 @login_required
 def index(request):
+    # Parameters for the API request
+    params = {
+        "fsym": "BTC",  # From symbol (Bitcoin)
+        "tsyms": "USD",  # To symbol (US Dollar)
+        "api_key": api_key,
+    }
+    # Making the API request
+    response = requests.get(endpoint, params=params)
+    # Parse the JSON response
+    data = response.json()
+    # Extract the Bitcoin price in USD
+    current_price = Decimal(data["USD"])
     portfolios = Portfolio.objects.filter(user=request.user.id)
     form = PortfolioForm()
 
@@ -158,6 +157,18 @@ def delete_transaction(request, pk):
 @login_required
 def portfolio(request, pk):
     portfolio = Portfolio.objects.get(id=pk)
+    # Parameters for the API request
+    params = {
+        "fsym": "BTC",  # From symbol (Bitcoin)
+        "tsyms": "USD",  # To symbol (US Dollar)
+        "api_key": api_key,
+    }
+    # Making the API request
+    response = requests.get(endpoint, params=params)
+    # Parse the JSON response
+    data = response.json()
+    # Extract the Bitcoin price in USD
+    current_price = Decimal(data["USD"])
 
     if request.user.id != portfolio.user.id:
         messages.success(request, ("You are not authorized to view this!"))
