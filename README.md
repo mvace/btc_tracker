@@ -3,7 +3,11 @@
 
 BTC Portfolio Tracker is a web application designed to help users manage and track their Bitcoin investment portfolios. The primary goal of the project is to provide users with a comprehensive tool to monitor their Bitcoin holdings, track transaction history, and analyze portfolio performance over time.
 
-It is one of my first project. My goal was to make this app work. I understand the code can be cleaner and more efficient but I am still learning and working on myself.
+It is one of my first project. My goal was to make this app work. I understand the code can be cleaner and more efficient but I am still learning and working on myself. I was mainly focusing on backend so the fronted is not ideal. It is mainly done for web browsers on larger screens and not for mobile devices.
+
+It is available here:
+
+https://btctracker.pythonanywhere.com/
 
 
 
