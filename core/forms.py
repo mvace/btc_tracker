@@ -24,7 +24,7 @@ class PortfolioForm(forms.ModelForm):
 
 
 def validate_amount_range(value):
-    min_amount = 0.00000001
+    min_amount = 0.00000000
     max_amount = 100000
 
     if value < min_amount or value > max_amount:
@@ -52,7 +52,6 @@ class TransactionForm(forms.ModelForm):
             attrs={
                 "class": "form-control",
                 "placeholder": "Enter the amount",
-                "step": "0.001",
             }
         ),
     )

@@ -8,16 +8,19 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         data = cryptocompare.get_historical_price_day_all("BTC", "USD")
+        print(data)
+        self.stdout.write(self.style.SUCCESS("Successfully got data"))
 
         for record in data:
             DailyClosePrice.objects.get_or_create(
                 daily_timestamp=record["time"],
                 close_price=record["close"],
             )
-            
+            self.stdout.write(self.style.SUCCESS(f'{record["time"]}'))
 
         portfolios = Portfolio.objects.all()
         for portfolio in portfolios:
             portfolio.update_metrics()
+            self.stdout.write(self.style.SUCCESS(f"{portfolio}"))
 
         self.stdout.write(self.style.SUCCESS("Successfully ran your custom command"))

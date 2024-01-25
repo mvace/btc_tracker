@@ -48,7 +48,7 @@ class Transaction(models.Model):
     amount = models.DecimalField(
         max_digits=32,
         decimal_places=8,
-        validators=[MinValueValidator(0.0000001), MaxValueValidator(100000)],
+        validators=[MinValueValidator(0.0000000099), MaxValueValidator(100000)],
     )
     price = models.DecimalField(max_digits=32, decimal_places=8, null=True, blank=True)
     initial_value = models.DecimalField(
@@ -133,6 +133,7 @@ class Portfolio(models.Model):
             metrics.roi_dict[day.daily_timestamp] = str(
                 cumulative_data["roi"] or Decimal("0")
             )
+            print(cumulative_data["roi"])
             roi_values = [(key, float(val)) for key, val in metrics.roi_dict.items()]
 
             max_roi = max(roi_values, key=lambda x: x[1])
