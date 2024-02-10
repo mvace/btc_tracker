@@ -72,9 +72,7 @@ class CustomUserCreationForm(UserCreationForm):
         self.fields["username"].widget.attrs["class"] = "form-control"
         self.fields["username"].widget.attrs["placeholder"] = "User Name"
         self.fields["username"].label = ""
-        self.fields[
-            "username"
-        ].help_text = (
+        self.fields["username"].help_text = (
             "Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only."
         )
 
@@ -91,9 +89,9 @@ class CustomUserCreationForm(UserCreationForm):
         self.fields["password2"].widget.attrs["class"] = "form-control"
         self.fields["password2"].widget.attrs["placeholder"] = "Confirm Password"
         self.fields["password2"].label = ""
-        self.fields[
-            "password2"
-        ].help_text = "Enter the same password as before, for verification."
+        self.fields["password2"].help_text = (
+            "Enter the same password as before, for verification."
+        )
 
 
 class CustomAuthenticationForm(AuthenticationForm):

@@ -32,15 +32,20 @@ class DailyClosePrice(models.Model):
 
 
 class Transaction(models.Model):
+    last_daily_close_price = DailyClosePrice.objects.last().daily_timestamp
+    limit_value = datetime.utcfromtimestamp(last_daily_close_price)
+    limit_value = limit_value.replace(tzinfo=timezone.utc)
+
     portfolio = models.ForeignKey(
         "Portfolio", on_delete=models.CASCADE, related_name="transactions"
     )
+
     timestamp = models.DateTimeField(
         validators=[
             MinValueValidator(
                 limit_value=datetime(year=2010, month=7, day=17, tzinfo=timezone.utc)
             ),
-            MaxValueValidator(limit_value=datetime.now(tz=timezone.utc)),
+            MaxValueValidator(limit_value=limit_value),
         ]
     )
     timestamp_unix = models.IntegerField(null=True, blank=True)
