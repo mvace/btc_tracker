@@ -3,11 +3,19 @@ from core.models import DailyClosePrice, Portfolio
 import cryptocompare
 
 
+# How to only
+# get latest timestamp
 class Command(BaseCommand):
-    help = "This command populates DailyClosePrice model with data from cryptocompare"
+    help = (
+        "This command updates DailyClosePrice data with latest data from cryptocompare"
+    )
 
     def handle(self, *args, **options):
-        data = cryptocompare.get_historical_price_day_all("BTC", "USD")
+        last_ts = DailyClosePrice.objects.last().daily_timestamp
+        print(last_ts, type(last_ts))
+        data = cryptocompare.get_historical_price_day_from(
+            "BTC", "USD", fromTs=last_ts + 1
+        )
         print(data)
         self.stdout.write(self.style.SUCCESS("Successfully got data"))
 

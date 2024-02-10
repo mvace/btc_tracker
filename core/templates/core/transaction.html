@@ -14,7 +14,7 @@
                     </div>
                     <div class="col-4 d-flex justify-content-end">
                         <a href="{% url 'delete_transaction' transaction.id %}" title="Delete Transaction" onclick="return confirmDelete();">
-                            <i class="bi bi-x-lg"></i>
+                            <button type="button" class="btn btn-outline-danger">Delete</button>
 
                         </a>
                     </div>
@@ -28,7 +28,10 @@
                     <li>Current Value: {{ transaction.get_current_value|floatformat:2 }}$</li>
                     <li>Net result: {{ net_result|floatformat:2 }}$</li>
                 </ul>
-                <p class="{% if roi > 0 %}bg-success{% else %}bg-danger{% endif %} rounded text-center text-light py-3 mx-5">ROI: {{ roi|floatformat:2 }}%</p>    
+                <p class="{% if roi > 0 %}bg-success{% else %}bg-danger{% endif %} rounded text-center text-light py-3 mx-5">ROI: {{ roi|floatformat:2 }}%</p>
+                <div class="d-flex justify-content-between mt-4">
+                    <button type="button" class="btn btn-outline-primary" onclick="history.back()">Back</button>
+                </div>  
 
             </div>
           </div>

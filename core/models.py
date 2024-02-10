@@ -94,7 +94,7 @@ class Portfolio(models.Model):
     def __str__(self) -> str:
         return f"{self.name}"
 
-    def update_metrics(self):
+    def update_metrics(self, daily_update=True):
         metrics, created = PortfolioMetrics.objects.get_or_create(portfolio=self)
         # Fetch all transactions for a specific portfolio, ordered by timestamp
         transactions = Transaction.objects.filter(portfolio__id=self.id).order_by(
@@ -107,9 +107,13 @@ class Portfolio(models.Model):
         )
         # Find the start date of the transactions
         start_date = transactions.first().daily_timestamp
-        daily_data = DailyClosePrice.objects.filter(daily_timestamp__gte=start_date)
 
-        metrics.roi_dict = {}
+        if daily_update:
+            last_item = list(metrics.roi_dict)[-1]
+            daily_data = DailyClosePrice.objects.filter(daily_timestamp__gte=last_item)
+        else:
+            daily_data = DailyClosePrice.objects.filter(daily_timestamp__gte=start_date)
+
         for day in daily_data:
             cumulative_data = transactions.filter(
                 timestamp_unix__lte=day.daily_timestamp
@@ -133,17 +137,17 @@ class Portfolio(models.Model):
             metrics.roi_dict[day.daily_timestamp] = str(
                 cumulative_data["roi"] or Decimal("0")
             )
-            print(cumulative_data["roi"])
-            roi_values = [(key, float(val)) for key, val in metrics.roi_dict.items()]
+            print(f'ADDED: {day.daily_timestamp} - ROI: {cumulative_data["roi"]}')
+        roi_values = [(key, float(val)) for key, val in metrics.roi_dict.items()]
 
-            max_roi = max(roi_values, key=lambda x: x[1])
-            min_roi = min(roi_values, key=lambda x: x[1])
-            metrics.max_roi = max_roi
-            metrics.min_roi = min_roi
-            metrics.average_price = cumulative_data["average_price"]
-            metrics.USD_invested = transactions_data["USD_invested"]
-            metrics.BTC_amount = transactions_data["BTC_amount"]
-            metrics.save()
+        max_roi = max(roi_values, key=lambda x: x[1])
+        min_roi = min(roi_values, key=lambda x: x[1])
+        metrics.max_roi = max_roi
+        metrics.min_roi = min_roi
+        metrics.average_price = cumulative_data["average_price"]
+        metrics.USD_invested = transactions_data["USD_invested"]
+        metrics.BTC_amount = transactions_data["BTC_amount"]
+        metrics.save()
 
     def get_current_value(self):
         current_value = current_price * self.metrics.BTC_amount
