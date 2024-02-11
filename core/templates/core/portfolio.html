@@ -5,18 +5,18 @@
 <div class="container">
     <!-- Section to display dashboards with information -->
     {% if transactions %}
-        <section>
-            <div class="row my-2">
-                <div class="col-6 d-flex justify-content-start">
-                    <h5>{{ portfolio.name }}</h5>
-                </div>
-                <div class="col-6 d-flex justify-content-end">
-                    <a href="{% url 'delete_portfolio' portfolio.id %}" title="Delete Portfolio" onclick="return confirmDelete();">
-                        <button type="button" class="btn btn-outline-danger">Delete</button>
-                    </a>
-                </div>
+    <section>
+        <div class="row my-2">
+            <div class="col-6 d-flex justify-content-start">
+                <h5>{{ portfolio.name }}</h5>
             </div>
-        
+            <div class="col-6 d-flex justify-content-end">
+                <a href="{% url 'delete_portfolio' portfolio.id %}" title="Delete Portfolio" onclick="return confirmDelete();">
+                    <button type="button" class="btn btn-outline-danger">Delete</button>
+                </a>
+            </div>
+        </div>
+    
         <div class="row">
             <div class="col-md">
                 <table class="table table-borderless">
@@ -32,9 +32,9 @@
                     <tr>
                     <td>Current ROI</td>
                     <td>
-                        <button type="button" class="btn {% if current_ROI > 0 %}btn-success{% else %}btn-danger{% endif %} btn-sm">
+                        <span class="btn-sm-style {% if current_ROI > 0 %}bg-success{% else %}bg-danger{% endif %}">
                             {{ current_ROI|floatformat:2 }}%
-                        </button>
+                        </span>
                     </td>
                     </tr>
                 </tbody>
@@ -54,7 +54,9 @@
                     <tr>
                     <td>Net Result (USD)</td>
                     <td>
-                        <button type="button" class="btn {% if net_result > 0 %}btn-success{% else %}btn-danger{% endif %} btn-sm">{{ net_result|floatformat:0 }}$</button>
+                        <span class="btn-sm-style {% if net_result > 0 %}bg-success{% else %}bg-danger{% endif %}">
+                            {{ net_result|floatformat:0 }}$
+                        </span>
                     </td>
                     </tr>
                 </tbody>
@@ -79,13 +81,18 @@
                     </tr>
                     <tr>
                     <td>Current BTC price</td>
-                    <td><button type="button" class="btn btn-sm" style="background-color:#f7931a;">{{ current_price|floatformat:0 }}$</button></td>
+                    <td>
+                        <span class="btn-sm-style" style="background-color:#f7931a; color: black;">
+                            {{ current_price|floatformat:0 }}$
+                        </span>
+                    </td>
                     </tr>
                 </tbody>
                 </table>
             </div>
         </div>
-        </section>
+    </section>
+    
 
         <!-- Section to display portfolio ROI graph -->
         <section>
@@ -173,6 +180,26 @@
         return result;
     }
 </script>
+<style>
+    .btn-sm-style {
+        display: inline-block;
+        padding: .25rem .5rem;
+        font-size: .875rem;
+        line-height: 1.5;
+        border-radius: .2rem;
+        color: white;
+        text-align: center;
+    }
+    .btn-style {
+        padding: .375rem .75rem;
+        border: 1px solid transparent;
+        border-radius: .25rem;
+        cursor: pointer;
+        color: white;
+        text-decoration: none; /* Remove underline from a element */
+    }
+    /* Additional custom styles if needed */
+</style>
 {% endblock %}
 
 

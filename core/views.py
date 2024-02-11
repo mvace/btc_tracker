@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from decimal import Decimal
 import plotly.graph_objects as go
 from django.db.models import F, ExpressionWrapper, DecimalField, Sum
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, reverse
 from django.contrib import messages
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required
@@ -151,10 +151,16 @@ def delete_transaction(request, pk):
         return redirect("index")
     portfolio = Portfolio.objects.get(id=transaction.portfolio_id)
     transaction.delete()
-    portfolio.update_metrics()
+    transactions = portfolio.transactions.all()
+    if transactions:
+        portfolio.update_metrics()
+
+    else:
+        metrics = portfolio.metrics
+        metrics.delete()
 
     messages.success(request, (f"Transaction #{pk} was deleted."))
-    return redirect("index")
+    return redirect(reverse("portfolio", kwargs={"pk": portfolio.id}))
 
 
 @login_required
