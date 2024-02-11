@@ -43,7 +43,7 @@ class Transaction(models.Model):
     timestamp = models.DateTimeField(
         validators=[
             MinValueValidator(
-                limit_value=datetime(year=2010, month=7, day=17, tzinfo=timezone.utc)
+                limit_value=datetime(year=2010, month=7, day=18, tzinfo=timezone.utc)
             ),
             MaxValueValidator(limit_value=limit_value),
         ]
@@ -53,7 +53,7 @@ class Transaction(models.Model):
     amount = models.DecimalField(
         max_digits=32,
         decimal_places=8,
-        validators=[MinValueValidator(0.0000000099), MaxValueValidator(100000)],
+        validators=[MinValueValidator(0.00019), MaxValueValidator(100000)],
     )
     price = models.DecimalField(max_digits=32, decimal_places=8, null=True, blank=True)
     initial_value = models.DecimalField(

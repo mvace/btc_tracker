@@ -1,5 +1,5 @@
 {% extends 'core/base.html' %}
-
+{% load tz %}
 {% block content %}
 
 {% if request.user.id == transaction.portfolio.user.id %}
@@ -20,10 +20,12 @@
                     </div>
                 </div>
                 
-                <small class="card-subtitle mb-2 text-body-secondary">{{ transaction.timestamp|date:"d-M-Y G:i" }}</small>
+                {% timezone "Europe/Paris" %}
+                    <small class="card-subtitle mb-2 text-body-secondary">{{ time|date:"d-M-Y G:i" }}</small>
+                {% endtimezone %}
                 <ul>
                     <li>Amount: {{ transaction.amount }}</li>
-                    <li>BTC Price: {{ transaction.price|floatformat:0 }}$</li>
+                    <li>BTC Price: {{ transaction.price|floatformat:2 }}$</li>
                     <li>Transaction Price: {{ transaction.initial_value|floatformat:2 }}$</li>
                     <li>Current Value: {{ transaction.get_current_value|floatformat:2 }}$</li>
                     <li>Net result: {{ net_result|floatformat:2 }}$</li>

@@ -26,8 +26,8 @@
           
               <!-- Amount Field -->
               <div class="form-group">
-                {{ form.amount.label_tag }}
                 {{ form.amount }}
+                <p class="small text-muted">{{ form.amount.label_tag }}</p> 
                 {% if form.amount.errors %}
                   <span class="text-danger">{{ form.amount.errors.0 }}</span>
                 {% endif %}

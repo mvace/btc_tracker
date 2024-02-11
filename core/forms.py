@@ -46,7 +46,7 @@ class TransactionForm(forms.ModelForm):
     )
 
     amount = forms.DecimalField(
-        label="",
+        label="Min: 0.0002, Max: 100000",
         validators=[validate_amount_range],
         widget=forms.NumberInput(
             attrs={

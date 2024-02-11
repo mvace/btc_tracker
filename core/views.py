@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 import plotly.graph_objects as go
 from django.db.models import F, ExpressionWrapper, DecimalField, Sum
@@ -76,6 +76,8 @@ def transaction_view(request, pk):
     current_val = transaction.get_current_value()
     roi = ((current_val - transaction.initial_value) / transaction.initial_value) * 100
     net_result = current_val - transaction.initial_value
+    time = datetime.utcfromtimestamp(transaction.timestamp_unix)
+    time = time.replace(tzinfo=timezone.utc)
 
     # Render the transaction template with data
     return render(
@@ -86,6 +88,7 @@ def transaction_view(request, pk):
             "current_val": current_val,
             "roi": roi,
             "net_result": net_result,
+            "time": time,
         },
     )
 

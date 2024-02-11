@@ -17,17 +17,6 @@
         <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarText" aria-controls="navbarText" aria-expanded="false" aria-label="Toggle navigation">
           <span class="navbar-toggler-icon"></span>
         </button>
-        <div class="collapse navbar-collapse" id="navbarText">
-          <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-            <li class="nav-item">
-              <a class="nav-link active" aria-current="page" href="#">About</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link active" aria-current="page" href="#">Contact</a>
-            </li>
-          </ul>
-          <span class="navbar-text">
-            
             <ul class="navbar-nav ml-auto align-items-center">
               {% if user.is_authenticated %}
               <li class="nav-item me-2">
@@ -93,7 +82,7 @@
       logoutButton.addEventListener("click", function(event) {
         // Display a confirmation prompt
         var confirmed = confirm("Are you sure you want to logout?");
-        
+
         // If the user confirms, proceed with the logout
         if (confirmed) {
           window.location.href = "{% url 'logout_user' %}";
