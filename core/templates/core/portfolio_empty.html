@@ -3,12 +3,14 @@
 {% block content %}
          
 <div class="text-center pt-5">
-  <h5>{{ portfolio.name }} <a href="{% url 'delete_portfolio' portfolio.id %}" title="Delete Portfolio" onclick="return confirmDelete();">
-    <i class="bi bi-x-lg"></i>
-</a></h5>
+  <h5>{{ portfolio.name }} </h5>
   <p class="text-muted">There are no transactions in this portfolio.</p>
+  <a href="{% url 'delete_portfolio' portfolio.id %}" title="Delete Portfolio" onclick="return confirmDelete();">
+    <button type="button" class="btn btn-outline-danger btn-sm">Delete</button>
+  </a>
 </div>
-<section class="container d-flex align-items-center justify-content-center">
+
+<section class="container d-flex align-items-center justify-content-center mt-1">
     <div class="text-center p-4 rounded bg-white">
         <h2>Add Transaction</h2>
 
@@ -31,7 +33,6 @@
                 {% endif %}
               </div>
             <button type="submit" class="btn mt-3" style="background-color:#f7931a;">Add Transaction</button>
-            
         </form>
     </div>
     

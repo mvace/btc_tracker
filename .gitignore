@@ -34,3 +34,6 @@ db.sqlite3
 
 # Static files
 staticfiles/
+
+# Other files
+whiteboard.py

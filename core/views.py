@@ -207,6 +207,7 @@ def portfolio(request, pk):
         ) * 100
         roi_data_dict = metrics.roi_dict
 
+        print(roi_data_dict)
         # Create main and highlight data for the plot
         main_data = go.Scatter(
             x=[datetime.utcfromtimestamp(int(key)) for key in roi_data_dict],

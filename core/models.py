@@ -99,7 +99,7 @@ class Portfolio(models.Model):
     def __str__(self) -> str:
         return f"{self.name}"
 
-    def update_metrics(self, daily_update=True):
+    def update_metrics(self):
         metrics, created = PortfolioMetrics.objects.get_or_create(portfolio=self)
         # Fetch all transactions for a specific portfolio, ordered by timestamp
         transactions = Transaction.objects.filter(portfolio__id=self.id).order_by(
@@ -112,13 +112,11 @@ class Portfolio(models.Model):
         )
         # Find the start date of the transactions
         start_date = transactions.first().daily_timestamp
+        print(start_date)
 
-        if daily_update:
-            last_item = list(metrics.roi_dict)[-1]
-            daily_data = DailyClosePrice.objects.filter(daily_timestamp__gte=last_item)
-        else:
-            daily_data = DailyClosePrice.objects.filter(daily_timestamp__gte=start_date)
+        daily_data = DailyClosePrice.objects.filter(daily_timestamp__gte=start_date)
 
+        metrics.roi_dict = {}
         for day in daily_data:
             cumulative_data = transactions.filter(
                 timestamp_unix__lte=day.daily_timestamp
@@ -142,7 +140,7 @@ class Portfolio(models.Model):
             metrics.roi_dict[day.daily_timestamp] = str(
                 cumulative_data["roi"] or Decimal("0")
             )
-            print(f'ADDED: {day.daily_timestamp} - ROI: {cumulative_data["roi"]}')
+            # print(f'ADDED: {day.daily_timestamp} - ROI: {cumulative_data["roi"]}')
         roi_values = [(key, float(val)) for key, val in metrics.roi_dict.items()]
 
         max_roi = max(roi_values, key=lambda x: x[1])
