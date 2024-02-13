@@ -101,13 +101,13 @@ class Portfolio(models.Model):
         return f"{self.name}"
 
     def update_metrics(self):
-        # Ensure metrics object exists for the portfolio
-        metrics, _ = PortfolioMetrics.objects.get_or_create(portfolio=self)
-
         # Check if there are any transactions
         if not Transaction.objects.filter(portfolio=self).exists():
             print("No transactions found for this portfolio.")
             return
+
+        # Ensure metrics object exists for the portfolio
+        metrics, _ = PortfolioMetrics.objects.get_or_create(portfolio=self)
 
         # Fetch all transactions for a specific portfolio, ordered by timestamp
         transactions = Transaction.objects.filter(portfolio__id=self.id).order_by(
