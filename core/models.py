@@ -1,7 +1,8 @@
 from datetime import timedelta, datetime
 from django.contrib.auth.models import User
 from django.db import models
-from django.db.models import F, ExpressionWrapper, DecimalField, Sum
+from django.db.models import F, ExpressionWrapper, DecimalField, Sum, Min
+from django.db.models.functions import Coalesce
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.utils import timezone
 from decimal import Decimal
@@ -100,7 +101,14 @@ class Portfolio(models.Model):
         return f"{self.name}"
 
     def update_metrics(self):
-        metrics, created = PortfolioMetrics.objects.get_or_create(portfolio=self)
+        # Ensure metrics object exists for the portfolio
+        metrics, _ = PortfolioMetrics.objects.get_or_create(portfolio=self)
+
+        # Check if there are any transactions
+        if not Transaction.objects.filter(portfolio=self).exists():
+            print("No transactions found for this portfolio.")
+            return
+
         # Fetch all transactions for a specific portfolio, ordered by timestamp
         transactions = Transaction.objects.filter(portfolio__id=self.id).order_by(
             "timestamp"
@@ -109,47 +117,74 @@ class Portfolio(models.Model):
         transactions_data = transactions.aggregate(
             BTC_amount=Sum("amount"),
             USD_invested=Sum("initial_value"),
+            start_date=Coalesce(Min("daily_timestamp"), None),
         )
-        # Find the start date of the transactions
-        start_date = transactions.first().daily_timestamp
-        print(start_date)
 
-        daily_data = DailyClosePrice.objects.filter(daily_timestamp__gte=start_date)
+        if transactions_data["start_date"] is None:
+            # No transactions to process
+            return
 
+        # Get all the DailyClosePrice instance for after the start date
+        daily_data = DailyClosePrice.objects.filter(
+            daily_timestamp__gte=transactions_data["start_date"]
+        ).order_by("daily_timestamp")
+
+        # Initialize ROI dict
         metrics.roi_dict = {}
+
+        # Pre-fetch all needed transactions
+        all_transactions = list(transactions)
+
+        # Pre-compute cumulative amounts and values up to each day
+        cumulative_data = {}
+        cumulative_amount = 0
+        cumulative_value = 0
+
+        for tx in all_transactions:
+            cumulative_amount += tx.amount
+            cumulative_value += tx.amount * tx.price
+            cumulative_data[tx.daily_timestamp] = (cumulative_amount, cumulative_value)
+
+        # Use pre-computed cumulative data for calculations
         for day in daily_data:
-            cumulative_data = transactions.filter(
-                timestamp_unix__lte=day.daily_timestamp
-            ).aggregate(
-                amount_cumulative=Sum("amount") or Decimal("0"),
-                value_cumulative=Sum(
-                    ExpressionWrapper(
-                        F("amount") * F("price"), output_field=DecimalField()
-                    )
+            # Find the latest transaction before or on 'day' to get cumulative values
+            latest_tx_before_day = max(
+                (
+                    timestamp
+                    for timestamp in cumulative_data.keys()
+                    if timestamp <= day.daily_timestamp
                 ),
-                average_price=ExpressionWrapper(
-                    F("value_cumulative") / F("amount_cumulative"),
-                    output_field=DecimalField(),
-                ),
-                roi=ExpressionWrapper(
-                    ((day.close_price - F("average_price")) / F("average_price")) * 100,
-                    output_field=DecimalField(),
-                ),
+                default=None,
             )
-            # Store ROI data for each day
-            metrics.roi_dict[day.daily_timestamp] = str(
-                cumulative_data["roi"] or Decimal("0")
-            )
-            # print(f'ADDED: {day.daily_timestamp} - ROI: {cumulative_data["roi"]}')
+
+            if latest_tx_before_day is not None:
+                amount_cumulative, value_cumulative = cumulative_data[
+                    latest_tx_before_day
+                ]
+                average_price = (
+                    value_cumulative / amount_cumulative
+                    if amount_cumulative
+                    else Decimal("0")
+                )
+                roi = (
+                    ((day.close_price - average_price) / average_price * 100)
+                    if average_price
+                    else Decimal("0")
+                )
+
+                # Store ROI data for each day
+                metrics.roi_dict[day.daily_timestamp] = str(roi)
+
+        # print(f'ADDED: {day.daily_timestamp} - ROI: {cumulative_data["roi"]}')
         roi_values = [(key, float(val)) for key, val in metrics.roi_dict.items()]
 
         max_roi = max(roi_values, key=lambda x: x[1])
         min_roi = min(roi_values, key=lambda x: x[1])
         metrics.max_roi = max_roi
         metrics.min_roi = min_roi
-        metrics.average_price = cumulative_data["average_price"]
-        metrics.USD_invested = transactions_data["USD_invested"]
-        metrics.BTC_amount = transactions_data["BTC_amount"]
+        metrics.average_price = average_price
+        metrics.USD_invested = value_cumulative
+        metrics.BTC_amount = amount_cumulative
         metrics.save()
 
     def get_current_value(self):

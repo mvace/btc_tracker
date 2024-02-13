@@ -27,7 +27,7 @@
                                 {% if portfolio.metrics.BTC_amount %}<td>{{ portfolio.metrics.BTC_amount }} BTC</td>{% else %}<td>N/A</td>{% endif %}
                                 {% if portfolio.metrics.USD_invested %}<td>${{ portfolio.metrics.USD_invested|floatformat:0 }}</td>{% else %}<td>N/A</td>{% endif %}
                                 {% if portfolio.get_current_value %}<td>${{ portfolio.get_current_value|floatformat:0 }}</td>{% else %}<td>N/A</td>{% endif %}
-                                {% if portfolio.get_current_roi %}<td ><button type="button" class="btn btn-sm {% if portfolio.get_current_roi > 0 %}btn-success{% else %} btn-danger{% endif %}"> {{ portfolio.get_current_roi|floatformat:0 }}%</button></td>{% else %}<td>N/A</td>{% endif %}
+                                {% if portfolio.get_current_roi %}<td ><span class="btn-sm-style {% if portfolio.get_current_roi > 0 %}bg-success{% else %}bg-danger{% endif %}"> {{ portfolio.get_current_roi|floatformat:0 }}%</span></td>{% else %}<td>N/A</td>{% endif %}
                             </tr>
                         </a>
 
@@ -111,4 +111,15 @@
         });
     });
 </script>
+<style>
+    .btn-sm-style {
+        display: inline-block;
+        padding: .25rem .5rem;
+        font-size: .875rem;
+        line-height: 1.5;
+        border-radius: .2rem;
+        color: white;
+        text-align: center;
+    }
+</style>
 {% endblock %}

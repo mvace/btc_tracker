@@ -37,3 +37,5 @@ staticfiles/
 
 # Other files
 whiteboard.py
+import_data.py
+data.xlsx

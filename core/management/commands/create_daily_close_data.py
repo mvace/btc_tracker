@@ -12,11 +12,9 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         last_ts = DailyClosePrice.objects.last().daily_timestamp
-        print(last_ts, type(last_ts))
         data = cryptocompare.get_historical_price_day_from(
             "BTC", "USD", fromTs=last_ts + 1
         )
-        print(data)
         self.stdout.write(self.style.SUCCESS("Successfully got data"))
 
         for record in data:
