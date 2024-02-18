@@ -7,22 +7,13 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.utils import timezone
 from decimal import Decimal
 import requests
+from .utils import get_current_price
+import os
+from dotenv import load_dotenv
 
-api_key = "71519726c4ebf2d4f41b3687d06386ba7c3a07d41ed4e1db77d2394e6b0fd540"
-endpoint = "https://min-api.cryptocompare.com/data/price"
+load_dotenv()
 
-# Parameters for the API request
-params = {
-    "fsym": "BTC",  # From symbol (Bitcoin)
-    "tsyms": "USD",  # To symbol (US Dollar)
-    "api_key": api_key,
-}
-# Making the API request
-response = requests.get(endpoint, params=params)
-# Parse the JSON response
-data = response.json()
-# Extract the Bitcoin price in USD
-current_price = Decimal(data["USD"])
+current_price = get_current_price()
 
 
 class DailyClosePrice(models.Model):
@@ -30,6 +21,10 @@ class DailyClosePrice(models.Model):
     close_price = models.DecimalField(
         max_digits=16, decimal_places=8, null=True, blank=True
     )
+
+
+MIN_AMOUNT = Decimal("0.0002")
+MAX_AMOUNT = Decimal("100000")
 
 
 class Transaction(models.Model):
@@ -54,7 +49,7 @@ class Transaction(models.Model):
     amount = models.DecimalField(
         max_digits=32,
         decimal_places=8,
-        validators=[MinValueValidator(0.00019), MaxValueValidator(100000)],
+        validators=[MinValueValidator(MIN_AMOUNT), MaxValueValidator(MAX_AMOUNT)],
     )
     price = models.DecimalField(max_digits=32, decimal_places=8, null=True, blank=True)
     initial_value = models.DecimalField(
@@ -76,7 +71,7 @@ class Transaction(models.Model):
             "tsym": "USD",  # To symbol (US Dollar)
             "limit": 1,  # Number of data points (e.g., 24 hours around the target timestamp)
             "toTs": self.timestamp_unix,  # End time for the data request (converted to Unix timestamp)
-            "api_key": api_key,
+            "api_key": str(os.getenv("CRYPTOCOMPARE_API_KEY")),
         }
         response = requests.get(endpoint, params=params)
         data = response.json()

@@ -7,28 +7,20 @@ from django.contrib import messages
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required
 from .forms import CustomUserCreationForm, CustomAuthenticationForm, PortfolioForm
-from .models import DailyClosePrice, Transaction, Portfolio, PortfolioMetrics
+from .models import (
+    DailyClosePrice,
+    Transaction,
+    Portfolio,
+    PortfolioMetrics,
+)
 from .forms import TransactionForm
 import requests
-
-api_key = "71519726c4ebf2d4f41b3687d06386ba7c3a07d41ed4e1db77d2394e6b0fd540"
-endpoint = "https://min-api.cryptocompare.com/data/price"
+from .utils import get_current_price
 
 
 @login_required
 def index(request):
-    # Parameters for the API request
-    params = {
-        "fsym": "BTC",  # From symbol (Bitcoin)
-        "tsyms": "USD",  # To symbol (US Dollar)
-        "api_key": api_key,
-    }
-    # Making the API request
-    response = requests.get(endpoint, params=params)
-    # Parse the JSON response
-    data = response.json()
-    # Extract the Bitcoin price in USD
-    current_price = Decimal(data["USD"])
+    current_price = get_current_price()
     portfolios = Portfolio.objects.filter(user=request.user.id)
     form = PortfolioForm()
 
@@ -69,17 +61,14 @@ def index(request):
 
 @login_required
 def transaction_view(request, pk):
-    # Retrieve the transaction with the given ID
     transaction = Transaction.objects.get(id=pk)
 
-    # Calculate the current value and ROI of the transaction
     current_val = transaction.get_current_value()
     roi = ((current_val - transaction.initial_value) / transaction.initial_value) * 100
     net_result = current_val - transaction.initial_value
     time = datetime.utcfromtimestamp(transaction.timestamp_unix)
     time = time.replace(tzinfo=timezone.utc)
 
-    # Render the transaction template with data
     return render(
         request,
         "core/transaction.html",
@@ -166,18 +155,7 @@ def delete_transaction(request, pk):
 @login_required
 def portfolio(request, pk):
     portfolio = Portfolio.objects.get(id=pk)
-    # Parameters for the API request
-    params = {
-        "fsym": "BTC",  # From symbol (Bitcoin)
-        "tsyms": "USD",  # To symbol (US Dollar)
-        "api_key": api_key,
-    }
-    # Making the API request
-    response = requests.get(endpoint, params=params)
-    # Parse the JSON response
-    data = response.json()
-    # Extract the Bitcoin price in USD
-    current_price = Decimal(data["USD"])
+    current_price = get_current_price()
 
     if request.user.id != portfolio.user.id:
         messages.success(request, ("You are not authorized to view this!"))
@@ -194,11 +172,9 @@ def portfolio(request, pk):
         return render(request, "core/portfolio.html", {"form": form})
 
     else:
-        # CryptoCompare API endpoint for price data
         transactions = Transaction.objects.filter(portfolio=pk).order_by(
             "daily_timestamp"
         )
-        # print(transactions)
         if len(transactions) == 0:
             form = TransactionForm()
 
@@ -216,8 +192,6 @@ def portfolio(request, pk):
         ) * 100
         roi_data_dict = metrics.roi_dict
 
-        print(roi_data_dict)
-        # Create main and highlight data for the plot
         main_data = go.Scatter(
             x=[datetime.utcfromtimestamp(int(key)) for key in roi_data_dict],
             y=[Decimal(roi_data_dict[key]) for key in roi_data_dict],
@@ -245,7 +219,6 @@ def portfolio(request, pk):
             name="Purchases",
         )
 
-        # Define layout for the plot
         layout = go.Layout(
             title="Return On Investment In Time",
             xaxis=dict(
@@ -276,15 +249,12 @@ def portfolio(request, pk):
             autosize=True,
         )
 
-        # Create the plot
         fig = go.Figure(data=[main_data, highlight_data], layout=layout)
 
-        # Convert the plot to HTML
         graph_html = fig.to_html(full_html=False)
 
         form = TransactionForm()
 
-        # Render the portfolio template with data
         return render(
             request,
             "core/portfolio.html",

@@ -96,7 +96,6 @@
         {{ graph_html|safe }}
     </section>
     {% else %}
-    <!-- Display alternative content or message if no transactions are available -->
     {% endif %}
     
     <section>
@@ -148,8 +147,6 @@
                       <span class="text-danger">{{ form.timestamp.errors.0 }}</span>
                     {% endif %}
                   </div>
-              
-                  <!-- Amount Field -->
                   <div class="form-group">
                     {{ form.amount }}
                     <p class="small text-muted">{{ form.amount.label_tag }}</p> 
