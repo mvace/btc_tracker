@@ -1,76 +1,98 @@
-from datetime import timedelta, datetime
-from django.contrib.auth.models import User
-from django.db import models
-from django.db.models import F, ExpressionWrapper, DecimalField, Sum, Min
-from django.db.models.functions import Coalesce
-from django.core.validators import MaxValueValidator, MinValueValidator
-from django.utils import timezone
+# Standard library imports
+from datetime import datetime, timedelta
 from decimal import Decimal
-import requests
-from .utils import get_current_price
 import os
+
+# Related third-party imports
+from django.contrib.auth.models import User
+from django.core.validators import MaxValueValidator, MinValueValidator
+from django.db import models
+from django.db.models import DecimalField, ExpressionWrapper, F, Min, Sum
+from django.db.models.functions import Coalesce
+from django.utils import timezone
+import requests
 from dotenv import load_dotenv
 
+# Local application/library specific imports
+from .utils import get_current_price
+
+# Load environment variables from the .env file
 load_dotenv()
 
+# Get the current price of the asset from a utility function
 current_price = get_current_price()
 
 
 class DailyClosePrice(models.Model):
+    # Timestamp for the daily close (assumed to be in Unix time format)
     daily_timestamp = models.IntegerField(null=True, blank=True)
+    # The closing price of the asset for the day
     close_price = models.DecimalField(
         max_digits=16, decimal_places=8, null=True, blank=True
     )
 
 
+# Define minimum and maximum allowable transaction amounts
 MIN_AMOUNT = Decimal("0.0002")
 MAX_AMOUNT = Decimal("100000")
 
 
 class Transaction(models.Model):
+    # Get the timestamp of the last daily close price to set as limit for transactions
     last_daily_close_price = DailyClosePrice.objects.last().daily_timestamp
     limit_value = datetime.utcfromtimestamp(last_daily_close_price)
     limit_value = limit_value.replace(tzinfo=timezone.utc)
 
+    # Link each transaction to a portfolio
     portfolio = models.ForeignKey(
         "Portfolio", on_delete=models.CASCADE, related_name="transactions"
     )
 
+    # Timestamp of the transaction. Validators ensure it falls within an acceptable range
     timestamp = models.DateTimeField(
         validators=[
             MinValueValidator(
-                limit_value=datetime(year=2010, month=7, day=18, tzinfo=timezone.utc)
+                datetime(year=2010, month=7, day=18, tzinfo=timezone.utc)
             ),
             MaxValueValidator(limit_value=limit_value),
         ]
     )
-    timestamp_unix = models.IntegerField(null=True, blank=True)
-    daily_timestamp = models.IntegerField(null=True, blank=True)
+    timestamp_unix = models.IntegerField(
+        null=True, blank=True
+    )  # Unix timestamp equivalent
+    daily_timestamp = models.IntegerField(
+        null=True, blank=True
+    )  # Daily timestamp for aggregation
     amount = models.DecimalField(
         max_digits=32,
         decimal_places=8,
         validators=[MinValueValidator(MIN_AMOUNT), MaxValueValidator(MAX_AMOUNT)],
-    )
-    price = models.DecimalField(max_digits=32, decimal_places=8, null=True, blank=True)
+    )  # Amount of asset transacted
+    price = models.DecimalField(
+        max_digits=32, decimal_places=8, null=True, blank=True
+    )  # Transaction price
     initial_value = models.DecimalField(
         max_digits=32, decimal_places=8, null=True, blank=True
-    )
+    )  # Initial value of the transaction
 
     def get_current_value(self):
+        # Calculate the current value of the transaction based on the current price of the asset
         return current_price * self.amount
 
     def save(self, *args, **kwargs):
+        # Adjust the timestamp for the transaction and calculate Unix timestamp and daily timestamp
         self.timestamp = self.timestamp - timedelta(hours=1)
         self.timestamp_unix = int(self.timestamp.timestamp())
         self.timestamp = self.timestamp.replace(minute=0, second=0, microsecond=0)
         self.daily_timestamp = int(self.timestamp.replace(hour=0).timestamp())
 
+        # Fetch the price of the asset at the transaction time from an external API
         endpoint = "https://min-api.cryptocompare.com/data/v2/histohour"
         params = {
             "fsym": "BTC",  # From symbol (Bitcoin)
             "tsym": "USD",  # To symbol (US Dollar)
-            "limit": 1,  # Number of data points (e.g., 24 hours around the target timestamp)
-            "toTs": self.timestamp_unix,  # End time for the data request (converted to Unix timestamp)
+            "limit": 1,
+            "toTs": self.timestamp_unix,
             "api_key": str(os.getenv("CRYPTOCOMPARE_API_KEY")),
         }
         response = requests.get(endpoint, params=params)
@@ -78,10 +100,13 @@ class Transaction(models.Model):
         price = data["Data"]["Data"][1]["close"]
         self.price = Decimal(price)
 
+        # Calculate the initial value of the transaction
         self.initial_value = self.amount * self.price
 
+        # Call the parent class's save method to handle the actual saving
         super().save(*args, **kwargs)
-        # Update PortfolioMetrics after saving a new transaction
+
+        # Update the portfolio metrics after saving the transaction
         self.portfolio.update_metrics()
 
     def __str__(self):
@@ -96,6 +121,9 @@ class Portfolio(models.Model):
         return f"{self.name}"
 
     def update_metrics(self):
+        # This method updates the portfolio's metrics based on its transactions
+        # It checks if there are any transactions and aggregates data to calculate metrics like ROI
+
         # Check if there are any transactions
         if not Transaction.objects.filter(portfolio=self).exists():
             print("No transactions found for this portfolio.")
@@ -140,9 +168,9 @@ class Portfolio(models.Model):
             cumulative_value += tx.amount * tx.price
             cumulative_data[tx.daily_timestamp] = (cumulative_amount, cumulative_value)
 
-        # Use pre-computed cumulative data for calculations
+        # Loop through each day's closing price to calculate daily ROI
         for day in daily_data:
-            # Find the latest transaction before or on 'day' to get cumulative values
+            # Find the last transaction before or on this day to get cumulative values
             latest_tx_before_day = max(
                 (
                     timestamp
@@ -152,41 +180,50 @@ class Portfolio(models.Model):
                 default=None,
             )
 
+            # Proceed if there's at least one transaction before this day
             if latest_tx_before_day is not None:
+                # Get cumulative amount and value from the last relevant transaction
                 amount_cumulative, value_cumulative = cumulative_data[
                     latest_tx_before_day
                 ]
+
+                # Calculate average price bought until this day (avoid division by zero)
                 average_price = (
                     value_cumulative / amount_cumulative
                     if amount_cumulative
                     else Decimal("0")
                 )
+
+                # Calculate ROI based on the day's closing price and average price
                 roi = (
                     ((day.close_price - average_price) / average_price * 100)
                     if average_price
                     else Decimal("0")
                 )
 
-                # Store ROI data for each day
+                # Save the calculated ROI for the day in a dictionary
                 metrics.roi_dict[day.daily_timestamp] = str(roi)
 
-        # print(f'ADDED: {day.daily_timestamp} - ROI: {cumulative_data["roi"]}')
-        roi_values = [(key, float(val)) for key, val in metrics.roi_dict.items()]
+                roi_values = [
+                    (key, float(val)) for key, val in metrics.roi_dict.items()
+                ]
 
-        max_roi = max(roi_values, key=lambda x: x[1])
-        min_roi = min(roi_values, key=lambda x: x[1])
-        metrics.max_roi = max_roi
-        metrics.min_roi = min_roi
-        metrics.average_price = average_price
-        metrics.USD_invested = value_cumulative
-        metrics.BTC_amount = amount_cumulative
-        metrics.save()
+                max_roi = max(roi_values, key=lambda x: x[1])
+                min_roi = min(roi_values, key=lambda x: x[1])
+                metrics.max_roi = max_roi
+                metrics.min_roi = min_roi
+                metrics.average_price = average_price
+                metrics.USD_invested = value_cumulative
+                metrics.BTC_amount = amount_cumulative
+                metrics.save()
 
     def get_current_value(self):
+        # This method calculates current USD value of the portfolio
         current_value = current_price * self.metrics.BTC_amount
         return current_value
 
     def get_current_roi(self):
+        # This method calculates current ROI of the portfolio
         current_value = self.get_current_value()
         roi = (
             (current_value - self.metrics.USD_invested) / self.metrics.USD_invested
@@ -196,12 +233,19 @@ class Portfolio(models.Model):
 
 
 class PortfolioMetrics(models.Model):
+    # This model stores various metrics related to a portfolio, such as ROI and investment totals
     portfolio = models.OneToOneField(
         Portfolio, on_delete=models.CASCADE, related_name="metrics"
     )
-    average_price = models.DecimalField(max_digits=32, decimal_places=2, null=True)
-    roi_dict = models.JSONField(default=dict)
-    max_roi = models.JSONField(null=True)
-    min_roi = models.JSONField(null=True)
-    USD_invested = models.DecimalField(max_digits=32, decimal_places=2, null=True)
-    BTC_amount = models.DecimalField(max_digits=32, decimal_places=8, null=True)
+    average_price = models.DecimalField(
+        max_digits=32, decimal_places=2, null=True
+    )  # Average purchase price of the asset
+    roi_dict = models.JSONField(default=dict)  # Dictionary storing ROI data over time
+    max_roi = models.JSONField(null=True)  # Maximum ROI achieved
+    min_roi = models.JSONField(null=True)  # Minimum ROI observed
+    USD_invested = models.DecimalField(
+        max_digits=32, decimal_places=2, null=True
+    )  # Total USD invested in the portfolio
+    BTC_amount = models.DecimalField(
+        max_digits=32, decimal_places=8, null=True
+    )  # Total amount of BTC held in the portfolio

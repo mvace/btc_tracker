@@ -1,25 +1,40 @@
+# Standard library imports
 from datetime import datetime, timezone
 from decimal import Decimal
+
+# Related third-party imports
 import plotly.graph_objects as go
-from django.db.models import F, ExpressionWrapper, DecimalField, Sum
-from django.shortcuts import render, redirect, reverse
-from django.contrib import messages
-from django.contrib.auth import login, logout, authenticate
-from django.contrib.auth.decorators import login_required
-from .forms import CustomUserCreationForm, CustomAuthenticationForm, PortfolioForm
-from .models import (
-    DailyClosePrice,
-    Transaction,
-    Portfolio,
-    PortfolioMetrics,
-)
-from .forms import TransactionForm
 import requests
+from django.contrib import messages
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.decorators import login_required
+from django.db.models import DecimalField, ExpressionWrapper, F, Sum
+from django.shortcuts import redirect, render, reverse
+
+# Local application/library specific imports
+from .forms import (
+    CustomAuthenticationForm,
+    CustomUserCreationForm,
+    PortfolioForm,
+    TransactionForm,
+)
+from .models import DailyClosePrice, Portfolio, PortfolioMetrics, Transaction
 from .utils import get_current_price
 
 
 @login_required
 def index(request):
+    """
+    The index view for displaying and managing portfolios.
+
+    - Fetches the current asset price using a utility function.
+    - Retrieves all portfolios owned by the current user.
+    - Allows the user to create a new portfolio through a form.
+    - If the form is submitted and valid, a new portfolio is created and the user is redirected to the index page.
+    - If there are no portfolios, renders an empty index template.
+    - For users with portfolios, it calculates and displays overall investment metrics.
+    """
+
     current_price = get_current_price()
     portfolios = Portfolio.objects.filter(user=request.user.id)
     form = PortfolioForm()
@@ -30,8 +45,9 @@ def index(request):
             portfolio = form.save(commit=False)
             portfolio.user = request.user
             portfolio.save()
-            messages.success(request, ("Portfolio Created"))
+            messages.success(request, "Portfolio Created")
             return redirect("index")
+
     else:
         if len(portfolios) == 0:
             return render(
@@ -39,6 +55,7 @@ def index(request):
                 "core/index_empty.html",
                 {"form": form, "current_price": current_price},
             )
+
         transactions = Transaction.objects.filter(portfolio_id__in=portfolios)
         metrics = PortfolioMetrics.objects.filter(portfolio__in=portfolios)
         overall = metrics.aggregate(Sum("USD_invested"), Sum("BTC_amount"))
@@ -61,11 +78,22 @@ def index(request):
 
 @login_required
 def transaction_view(request, pk):
+    """
+    Displays details of a specific transaction.
+
+    Retrieves a transaction by its primary key (pk) and calculates its current value,
+    return on investment (ROI), and net result based on the initial investment and
+    current market price. It also formats the transaction timestamp for display.
+    """
+
     transaction = Transaction.objects.get(id=pk)
 
     current_val = transaction.get_current_value()
+
     roi = ((current_val - transaction.initial_value) / transaction.initial_value) * 100
+
     net_result = current_val - transaction.initial_value
+
     time = datetime.utcfromtimestamp(transaction.timestamp_unix)
     time = time.replace(tzinfo=timezone.utc)
 
@@ -83,13 +111,26 @@ def transaction_view(request, pk):
 
 
 def login_user(request):
+    """
+    Handles the login process for users.
+
+    If the request method is POST, it attempts to authenticate the user using the
+    CustomAuthenticationForm. If authentication is successful, the user is logged in,
+    a success message is displayed, and the user is redirected to the index page.
+    If authentication fails, the form errors are printed to the console.
+
+    For GET requests, or if authentication fails, the login form is displayed.
+    If the 'next' parameter is present in the request, an informational message
+    prompts the user to log in to access the requested page.
+    """
+
     if request.method == "POST":
         form = CustomAuthenticationForm(request, data=request.POST)
         if form.is_valid():
             user = form.get_user()
             if user:
                 login(request, user)
-                messages.success(request, ("You're now logged in."))
+                messages.success(request, "You're now logged in.")
                 return redirect("index")
         else:
             print(form.errors)
@@ -103,6 +144,14 @@ def login_user(request):
 
 
 def register(request):
+    """
+    Handles the user registration process.
+
+    This view manages user registration using the CustomUserCreationForm. On POST requests, it
+    attempts to create a new user account. If the form is valid, the user is saved, automatically
+    logged in, and redirected to the index page with a success message. For GET requests, or if
+    the form is not valid, it displays the registration form.
+    """
     if request.method == "POST":
         form = CustomUserCreationForm(request.POST)
         if form.is_valid():
@@ -117,12 +166,23 @@ def register(request):
 
 
 def logout_user(request):
+    """
+    Handles user logout process
+    """
     logout(request)
     messages.success(request, ("You've been logged out."))
     return redirect("index")
 
 
 def delete_portfolio(request, pk):
+    """
+    Deletes a specified portfolio if the request user is the owner.
+
+    Retrieves the portfolio by its primary key (pk) and checks if the current
+    user is the owner. If not, displays an authorization error message and redirects
+    to the index page. If the user is the owner, the portfolio is deleted, a success
+    message is displayed, and the user is redirected to the index page.
+    """
     portfolio = Portfolio.objects.get(id=pk)
     if request.user.id != portfolio.user.id:
         messages.success(request, ("You are not authorized to do this!"))
@@ -133,6 +193,16 @@ def delete_portfolio(request, pk):
 
 
 def delete_transaction(request, pk):
+    """
+    Deletes a specified transaction if the request user is the owner of the portfolio.
+
+    This function retrieves the transaction by its primary key (pk) and checks if the current
+    user is the owner of the portfolio containing the transaction. If not, it displays an
+    authorization error message and redirects to the index page. If the user is the owner,
+    the transaction is deleted. After deletion, it updates the portfolio metrics if there are
+    remaining transactions, or deletes the portfolio metrics if there are none. A success message
+    is displayed, and the user is redirected to the portfolio detail page.
+    """
     transaction = Transaction.objects.get(id=pk)
 
     if request.user.id != transaction.portfolio.user.id:
@@ -154,6 +224,17 @@ def delete_transaction(request, pk):
 
 @login_required
 def portfolio(request, pk):
+    """
+    Displays and manages a specific portfolio identified by its primary key (pk).
+
+    This view allows the authorized user to view details of their portfolio, add new transactions,
+    and view the portfolio's performance metrics including a graph of Return On Investment (ROI) over time.
+
+    Unauthorized users are redirected with an error message. The view supports both POST requests for
+    adding new transactions and GET requests for viewing portfolio details. Metrics calculated include
+    current value, net result, and current ROI. A Plotly graph visualizes the portfolio's ROI over time.
+    """
+
     portfolio = Portfolio.objects.get(id=pk)
     current_price = get_current_price()
 
