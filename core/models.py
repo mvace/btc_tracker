@@ -77,7 +77,45 @@ class Transaction(models.Model):
 
     def get_current_value(self):
         # Calculate the current value of the transaction based on the current price of the asset
+        current_price = (
+            get_current_price()
+        )  # Assuming get_current_price is a global function
         return current_price * self.amount
+
+    def fetch_price_at_timestamp(self, timestamp):
+        """
+        Fetches the price of Bitcoin (BTC) in USD at a specific timestamp from the CryptoCompare API.
+
+        Args:
+            timestamp (int): The Unix timestamp for which to fetch the price.
+
+        Returns:
+            Decimal: The price of Bitcoin in USD at the specified timestamp.
+            None: If there was an error fetching the price.
+        """
+        endpoint = "https://min-api.cryptocompare.com/data/v2/histohour"
+        api_key = str(os.getenv("CRYPTOCOMPARE_API_KEY"))
+        if not api_key:
+            print("Error: CRYPTOCOMPARE_API_KEY is not set.")
+            return None
+        params = {
+            "fsym": "BTC",  # From symbol (Bitcoin)
+            "tsym": "USD",  # To symbol (US Dollar)
+            "limit": 1,
+            "toTs": timestamp,
+            "api_key": api_key,
+        }
+
+        try:
+            response = requests.get(endpoint, params=params)
+            response.raise_for_status()  # Raise HTTPError for bad responses
+            data = response.json()
+            price = data["Data"]["Data"][1]["close"]
+            return Decimal(price)
+        except (requests.exceptions.RequestException, ValueError, KeyError) as e:
+            # Handle errors and log them
+            print(f"Error fetching price from CryptoCompare API: {e}")
+            return None
 
     def save(self, *args, **kwargs):
         # Adjust the timestamp for the transaction and calculate Unix timestamp and daily timestamp
@@ -86,19 +124,13 @@ class Transaction(models.Model):
         self.timestamp = self.timestamp.replace(minute=0, second=0, microsecond=0)
         self.daily_timestamp = int(self.timestamp.replace(hour=0).timestamp())
 
-        # Fetch the price of the asset at the transaction time from an external API
-        endpoint = "https://min-api.cryptocompare.com/data/v2/histohour"
-        params = {
-            "fsym": "BTC",  # From symbol (Bitcoin)
-            "tsym": "USD",  # To symbol (US Dollar)
-            "limit": 1,
-            "toTs": self.timestamp_unix,
-            "api_key": str(os.getenv("CRYPTOCOMPARE_API_KEY")),
-        }
-        response = requests.get(endpoint, params=params)
-        data = response.json()
-        price = data["Data"]["Data"][1]["close"]
-        self.price = Decimal(price)
+        # Fetch the price of the asset at the transaction time
+        price = self.fetch_price_at_timestamp(self.timestamp_unix)
+        if price is None:
+            print("Transaction not saved due to inability to fetch price.")
+            return  # Do not save the transaction if the price could not be fetched
+
+        self.price = price
 
         # Calculate the initial value of the transaction
         self.initial_value = self.amount * self.price
